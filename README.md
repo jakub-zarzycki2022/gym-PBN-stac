@@ -23,20 +23,21 @@ Anaconda: **TO BE UPDATED**
 ## Configuring your own PB(C)N
 Custom network environments need to be parameterised with one of the following two configurations:
 1. `PBN_data`: list of tuples containing node information.
-  - Each tuple should contain the following five variables, in order:
-    1. `input_mask`: a boolean mask as a numpy array that indicates which nodes affect the node's value.
-    2. `function`: a truth table representing a boolean function over the nodes singled out by the `input_mask`. The truth table should have a tree-like shape of `[2] * sum(input_mask)`, and the item at position `pos` should indicate the probability of the node taking the value `True` given `pos` as the state of the input nodes (which are singled out by `input_mask`.
-    3. `i`: the position of the node in the network's list of vertices.
-    4. `name`: string representing the name of the node. Could be `None`.
-    5. `is_control`: boolean flag on whether or not this is a control node (for PBCNs).
+    - Each tuple should contain the following five variables, in order:
+      1. `input_mask`: a boolean mask as a numpy array that indicates which nodes affect the node's value.
+      2. `function`: a truth table representing a boolean function over the nodes singled out by the `input_mask`. The truth table should have a tree-like shape of `[2] * sum(input_mask)`, and the item at position `pos` should indicate the probability of the node taking the value `True` given `pos` as the state of the input nodes (which are singled out by `input_mask`.
+      3. `i`: the position of the node in the network's list of vertices.
+      4. `name`: string representing the name of the node. Could be `None`.
+      5. `is_control`: boolean flag on whether or not this is a control node (for PBCNs).
 
 2. `logic_func_data`: Think setting all the previous information manually is a pain? We do too, so this is the more sane configuration option. Through `logic_func_data`, you can pass in just the names of the nodes, and the associated logic functions (with their probability of activating) and the constructor will do the rest.
-  - `logic_func_data` is a tuple. The tuple contains:
-    1. `node_names`: a list of string literals representing each node in the network. Make sure to put control nodes at the start of the list.
-    2. `logic_funcs`: a list of logic functions for each node. Each inner list (associated with the node in the corresponding position in the node names) contains tuples describing logic functions and probabilities of activating for this node. This is modelled as follows:
-      1. `logic_expr`: the logic expression representing the logic function for the tuple. You can use literals that appear in the `node_names` list and Python boolean operators `and`, `not`, `or`.
-      2. `probability`: a float representing the probability of this function activating.
-   You can view an example over at [example.py](example.py).
+    - `logic_func_data` is a tuple. The tuple contains:
+      1. `node_names`: a list of string literals representing each node in the network. Make sure to put control nodes at the start of the list.
+      2. `logic_funcs`: a list of logic functions for each node. Each inner list (associated with the node in the corresponding position in the node names) contains tuples describing logic functions and probabilities of activating for this node. This is modelled as follows:
+        1. `logic_expr`: the logic expression representing the logic function for the tuple. You can use literals that appear in the `node_names` list and Python boolean operators `and`, `not`, `or`.
+        2. `probability`: a float representing the probability of this function activating.
+   
+   You can view an example of this second configuration over at [example.py](example.py).
 
 #### Goal Configuration
 Another thing you can configure for your own network is the actual control target. When not provided explicitly, the environment calculates the attractors for the environment and selects the last one as the target. However, especially for PBCNs, we encourage you to provide it explicitly. To do so, provide a `goal_config` argument to the environment instantiation, with the following information:

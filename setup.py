@@ -10,7 +10,7 @@ setup(
     description="An OpenAI Gym modelling Probabilistic Boolean Networks and Probabilistic Boolean Control Networks.",
     long_description=README,
     long_description_content_type="text/markdown",
-    url="https://github.com/evangelos-ch/gym-PBN/",
+    url="https://github.com/evangelos-ch/gym-pbn/",
     author="Evangelos (Angel) Chatzaroulas",
     author_email="ec00727@surrey.ac.uk",
     license="MIT",
@@ -21,6 +21,6 @@ setup(
         "Intended Audience :: Science/Research",
         "Topic :: Scientific/Engineering :: Artificial Intelligence",
     ],
-    packages=["gym_PBN"],
+    packages=["gym_pbn"],
     install_requires=["gym", "networkx", "numpy"]
 )

@@ -1,5 +1,6 @@
-from gym_PBN.types import INPUT_MASK, TRUTH_TABLE
 from numpy import random
+
+from gym_pbn.types import INPUT_MASK, TRUTH_TABLE
 
 class Node():
     def __init__(self, input_mask: INPUT_MASK, function: TRUTH_TABLE, i: int, name: str = None, is_control: bool = False):

@@ -4,7 +4,7 @@ from typing import List, Union
 
 import numpy as np
 
-from gym_PBN.types import LOGIC_FUNC_DATA, PBN_DATA
+from gym_pbn.types import LOGIC_FUNC_DATA, PBN_DATA
 
 from .pbn import PBN
 from .node import Node

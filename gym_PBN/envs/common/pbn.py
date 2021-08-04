@@ -5,9 +5,9 @@ from typing import Union, List
 import numpy as np
 import networkx as nx
 
-from gym_PBN.utils import booleanize
-from gym_PBN.utils.converters import logic_funcs_to_PBN_data
-from gym_PBN.types import LOGIC_FUNC_DATA, PBN_DATA, STATE, TRUTH_TABLE
+from gym_pbn.utils import booleanize
+from gym_pbn.utils.converters import logic_funcs_to_PBN_data
+from gym_pbn.types import LOGIC_FUNC_DATA, PBN_DATA, STATE, TRUTH_TABLE
 
 from .node import Node
 

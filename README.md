@@ -1,7 +1,11 @@
 # gym-PBN
 An OpenAI Gym environment modelling Probabilistic Boolean Networks and Probabilistic Boolean Control Networks.
 
-The control of Probabilistic Boolean (Control) Networks is a well studied problem in control theory. Recently, however, there has been promise on the application of Reinforcement Learning for control of said networks to certain attractor states as well. The point of this library is to provide accessible PB(C)N environments in the OpenAI Gym framework.
+Probabilistic Boolean (Control) Networks are Boolean Networks where the logic functions for each node are switched stochastically according to a probability distribution. They were introduced by [Shmulevich, Ilya, et al., 2002](https://academic.oup.com/bioinformatics/article/18/2/261/225574?login=true) and are used primarily to model Gene Regulatory Networks. As such, their control has applications in theuraputics, and specifically cancer treatment.
+
+The control of Probabilistic Boolean (Control) Networks is a well studied problem in control theory. Recently, however, there has been promise on the application of Reinforcement Learning for control of said networks to certain attractor states as well [Papagiannis, Georgios, et al., 2019](https://arxiv.org/abs/1909.03331).
+
+The point of this library is to provide accessible PB(C)N environments in the OpenAI Gym framework. The environments provided are fully [Stable Baselines3](https://github.com/DLR-RM/stable-baselines3)-compatible
 
 ## Environments
 - `gym_PBN:PBN-v0`: The base Probabilistic Boolean Network environment. Actions involve taking no action, or "flipping" the value of a node at the provided index.
@@ -9,7 +13,7 @@ The control of Probabilistic Boolean (Control) Networks is a well studied proble
 
 The environments provide the framework for such networks. They need to be instantiated with appropriate node data.
 
-## Setup
+## Installation
 Requirements: [Python 3.6+](https://www.python.org/downloads/).
 
 PIP: `python -m pip install gym-PBN`

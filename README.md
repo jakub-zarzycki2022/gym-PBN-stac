@@ -54,6 +54,6 @@ The final thing you can configure without modifying the environment is the actua
 
 
 ## Credits
-The majority of the work for the implementation of Probabilistic Boolean Networks in Python can be attributed to [Vytenis Šliogeris](https://github.com/vjsliogeris) and his [PBN_env](https://github.com/vjsliogeris/PBN_env) package. In fact he implemented the prototype version of `gym-PBN` some time ago.
+The majority of the work for the implementation of Probabilistic Boolean Networks in Python can be attributed to [Vytenis Šliogeris](https://github.com/vjsliogeris) and his [PBN_env](https://github.com/vjsliogeris/PBN_env) package. In fact he implemented the prototype version of `gym-pbn` some time ago.
 
 [Evangelos Chatzaroulas](mailto:ec00727@surrey.ac.uk) finished the adaptation to the OpenAI Gym framework and implemented PB(C)N support. He is currently the primary maintainer.

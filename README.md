@@ -1,4 +1,4 @@
-# gym-pbn
+# gym-PBN
 An OpenAI Gym environment modelling Probabilistic Boolean Networks and Probabilistic Boolean Control Networks.
 
 Probabilistic Boolean (Control) Networks are Boolean Networks where the logic functions for each node are switched stochastically according to a probability distribution. They were introduced by [Shmulevich, Ilya, et al., 2002](https://academic.oup.com/bioinformatics/article/18/2/261/225574?login=true) and are used primarily to model Gene Regulatory Networks. As such, their control has applications in theuraputics, and specifically cancer treatment.
@@ -8,15 +8,15 @@ The control of Probabilistic Boolean (Control) Networks is a well studied proble
 The point of this library is to provide accessible PB(C)N environments in the OpenAI Gym framework. The environments provided are fully [Stable Baselines3](https://github.com/DLR-RM/stable-baselines3)-compatible
 
 ## Environments
-- `gym_pbn:PBN-v0`: The base Probabilistic Boolean Network environment. Actions involve taking no action, or "flipping" the value of a node at the provided index.
-- `gym_pbn:PBCN-v0`: The base Probabilistic Boolean Control Network environment. Actions involve setting the control nodes to a certain value.
+- `gym_PBN:PBN-v0`: The base Probabilistic Boolean Network environment. Actions involve taking no action, or "flipping" the value of a node at the provided index.
+- `gym_PBN:PBCN-v0`: The base Probabilistic Boolean Control Network environment. Actions involve setting the control nodes to a certain value.
 
 The environments provide the framework for such networks. They need to be instantiated with appropriate node data.
 
 ## Installation
 Requirements: [Python 3.6+](https://www.python.org/downloads/).
 
-PIP: `python -m pip install gym-pbn`
+PIP: `python -m pip install gym-PBN`
 
 Anaconda: **TO BE UPDATED**
 
@@ -54,6 +54,6 @@ The final thing you can configure without modifying the environment is the actua
 
 
 ## Credits
-The majority of the work for the implementation of Probabilistic Boolean Networks in Python can be attributed to [Vytenis Šliogeris](https://github.com/vjsliogeris) and his [PBN_env](https://github.com/vjsliogeris/PBN_env) package. In fact he implemented the prototype version of `gym-pbn` some time ago.
+The majority of the work for the implementation of Probabilistic Boolean Networks in Python can be attributed to [Vytenis Šliogeris](https://github.com/vjsliogeris) and his [PBN_env](https://github.com/vjsliogeris/PBN_env) package. In fact he implemented the prototype version of `gym-PBN` some time ago.
 
-[Evangelos Chatzaroulas](mailto:ec00727@surrey.ac.uk) finished the adaptation to the OpenAI Gym framework and implemented PB(C)N support. He is currently the primary maintainer.
+[Evangelos Chatzaroulas](mailto:e.chatzaroulas@surrey.ac.uk) finished the adaptation to the OpenAI Gym framework and implemented PB(C)N support. He is currently the primary maintainer.

@@ -1,6 +1,6 @@
 import gym
 
-env = gym.make("gym_pbn:PBCN-v0", logic_func_data=(
+env = gym.make("gym_PBN:PBCN-v0", logic_func_data=(
     ["u", "x1", "x2", "x3", "x4"],
     [
         [],

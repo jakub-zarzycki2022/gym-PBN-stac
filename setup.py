@@ -5,14 +5,14 @@ CURRENT_PATH = pathlib.Path(__file__).parent
 README = (CURRENT_PATH / "README.md").read_text()
 
 setup(
-    name='gym-pbn',
+    name='gym-PBN',
     version='1.0.0',
     description="An OpenAI Gym modelling Probabilistic Boolean Networks and Probabilistic Boolean Control Networks.",
     long_description=README,
     long_description_content_type="text/markdown",
-    url="https://github.com/evangelos-ch/gym-pbn/",
+    url="https://github.com/evangelos-ch/gym-PBN/",
     author="Evangelos (Angel) Chatzaroulas",
-    author_email="ec00727@surrey.ac.uk",
+    author_email="e.chatzaroulas@surrey.ac.uk",
     license="MIT",
     classifiers=[
         "Environment :: Console",
@@ -21,6 +21,7 @@ setup(
         "Intended Audience :: Science/Research",
         "Topic :: Scientific/Engineering :: Artificial Intelligence",
     ],
-    packages=["gym_pbn"],
-    install_requires=["gym", "networkx", "numpy"]
+    packages=["gym_PBN"],
+    install_requires=["gym", "networkx", "numpy"],
+    python_requires='>3.6',
 )

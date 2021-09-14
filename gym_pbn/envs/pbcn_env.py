@@ -5,7 +5,7 @@ import networkx as nx
 
 from .pbn_env import PBNEnv
 from .common.pbcn import PBCN
-from gym_pbn.types import GYM_STEP_RETURN, REWARD, STATE, TERMINATED
+from gym_PBN.types import GYM_STEP_RETURN, REWARD, STATE, TERMINATED
 
 
 class PBCNEnv(PBNEnv):

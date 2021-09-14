@@ -7,7 +7,7 @@ import networkx as nx
 import numpy as np
 
 from .common.pbn import PBN
-from gym_pbn.types import GYM_STEP_RETURN, REWARD, STATE, TERMINATED
+from gym_PBN.types import GYM_STEP_RETURN, REWARD, STATE, TERMINATED
 
 
 class PBNEnv(gym.Env):

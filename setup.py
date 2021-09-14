@@ -6,7 +6,7 @@ README = (CURRENT_PATH / "README.md").read_text()
 
 setup(
     name='gym-PBN',
-    version='1.0.0',
+    version='1.0.1',
     description="An OpenAI Gym modelling Probabilistic Boolean Networks and Probabilistic Boolean Control Networks.",
     long_description=README,
     long_description_content_type="text/markdown",

@@ -1,5 +1,5 @@
 import pathlib
-from setuptools import setup
+from setuptools import setup, find_packages
 
 CURRENT_PATH = pathlib.Path(__file__).parent
 README = (CURRENT_PATH / "README.md").read_text()
@@ -21,7 +21,7 @@ setup(
         "Intended Audience :: Science/Research",
         "Topic :: Scientific/Engineering :: Artificial Intelligence",
     ],
-    packages=["gym_PBN"],
+    packages=find_packages(),
     install_requires=["gym", "networkx", "numpy"],
     python_requires='>3.6',
 )

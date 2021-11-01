@@ -4,8 +4,8 @@ Simple expression evaluator. Heavily based on original script by https://github.
 """
 
 import enum
-from collections import deque
 import re
+from collections import deque
 
 
 class TokenType(enum.Enum):
@@ -63,16 +63,19 @@ class LogicExpressionEvaluator():
         # TODO Logic NOT / AND / OR, also splitting into multiple symbols
         i = 0
         while i in range(len(in_str)):
-            token = in_str[i]
-            has_l_parenthesis = token[0] == TokenDicRev[TokenType.L_PARANTHESIS]
-            has_r_parenthesis = token[-1] == TokenDicRev[TokenType.R_PARANTHESIS]
-            if has_l_parenthesis or has_r_parenthesis:
-                in_str[i] = token.strip(TokenDicRev[TokenType.L_PARANTHESIS] + TokenDicRev[TokenType.R_PARANTHESIS])
-                if has_l_parenthesis:
-                    in_str.insert(i, TokenDicRev[TokenType.L_PARANTHESIS])
-                else:
-                    in_str.insert(i + 1, TokenDicRev[TokenType.R_PARANTHESIS])
-                i += 1
+            l_parenthesis_count = in_str[i].count(TokenDicRev[TokenType.L_PARANTHESIS])
+            r_parenthesis_count = in_str[i].count(TokenDicRev[TokenType.R_PARANTHESIS])
+            if l_parenthesis_count > 0 or r_parenthesis_count > 0:
+                new = in_str[i].strip(TokenDicRev[TokenType.L_PARANTHESIS] + TokenDicRev[TokenType.R_PARANTHESIS])
+                if len(new) > 0:
+                    in_str[i] = new
+                    if l_parenthesis_count:
+                        for _ in range(l_parenthesis_count):
+                            in_str.insert(i, TokenDicRev[TokenType.L_PARANTHESIS])
+                    else:
+                        for _ in range(r_parenthesis_count):
+                            in_str.insert(i + 1, TokenDicRev[TokenType.R_PARANTHESIS])
+                    i += 1
             i += 1
 
         for i, token in enumerate(in_str):

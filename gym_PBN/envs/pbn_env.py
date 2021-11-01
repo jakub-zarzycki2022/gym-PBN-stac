@@ -1,26 +1,33 @@
-from typing import Tuple, Union, List, Set
+from typing import List, Set, Tuple, Union
 
 import gym
-from gym.spaces import MultiBinary, Discrete
-
 import networkx as nx
 import numpy as np
+from gym.spaces import Discrete, MultiBinary
+from gym_PBN.types import GYM_STEP_RETURN, REWARD, STATE, TERMINATED
 
 from .common.pbn import PBN
-from gym_PBN.types import GYM_STEP_RETURN, REWARD, STATE, TERMINATED
 
 
 class PBNEnv(gym.Env):
-    metadata = {
-        "render.modes": ["cli", "PBN", "STG", "funcs"]
-    }
+    metadata = {"render.modes": ["cli", "PBN", "STG", "funcs", "idx"]}
 
-    def __init__(self, PBN_data = [], logic_func_data = None, goal_config: dict = None, reward_config: dict = None):
+    def __init__(
+        self,
+        PBN_data=[],
+        logic_func_data=None,
+        goal_config: dict = None,
+        reward_config: dict = None,
+    ):
         self.PBN = PBN(PBN_data, logic_func_data)
 
         # Goal configuration
-        goal_config = self._check_config(goal_config, "goal", set(["target", "all_attractors"]))
-        if goal_config is None:  # If no goal config is provided, then compute attractors and set the target as the last attractor.
+        goal_config = self._check_config(
+            goal_config, "goal", set(["target", "all_attractors"])
+        )
+        if (
+            goal_config is None
+        ):  # If no goal config is provided, then compute attractors and set the target as the last attractor.
             goal_config = {}
             goal_config["all_attractors"] = self.compute_attractors()
             goal_config["target"] = goal_config["all_attractors"][-1]
@@ -28,12 +35,15 @@ class PBNEnv(gym.Env):
         self.all_attractors = goal_config["all_attractors"]
 
         # Reward configuration
-        reward_config = self._check_config(reward_config, "reward", set(["successful_reward", "wrong_attractor_cost", "action_cost"]),
+        reward_config = self._check_config(
+            reward_config,
+            "reward",
+            set(["successful_reward", "wrong_attractor_cost", "action_cost"]),
             default_values={
-                "successful_reward": 5,
+                "successful_reward": 10,
                 "wrong_attractor_cost": 2,
-                "action_cost": 1
-            }
+                "action_cost": 1,
+            },
         )
         self.successful_reward = reward_config["successful_reward"]
         self.wrong_attractor_cost = reward_config["wrong_attractor_cost"]
@@ -44,7 +54,13 @@ class PBNEnv(gym.Env):
         self.observation_space.dtype = bool
         self.action_space = Discrete(self.PBN.N + 1)
 
-    def _check_config(self, config: dict, _type: str, required_keys: Set[str], default_values: dict = None) -> dict:
+    def _check_config(
+        self,
+        config: dict,
+        _type: str,
+        required_keys: Set[str],
+        default_values: dict = None,
+    ) -> dict:
         """Small utility function to validate an environment config.
 
         Args:
@@ -62,10 +78,12 @@ class PBNEnv(gym.Env):
         if config:
             missing_keys = required_keys - set(config.keys())
             if len(missing_keys) > 1:  # If any of the required keys are missing
-                raise ValueError(f"Invalid {_type} config provided. The following required values are missing: {', '.join(missing_keys)}.")
+                raise ValueError(
+                    f"Invalid {_type} config provided. The following required values are missing: {', '.join(missing_keys)}."
+                )
         else:
             config = default_values
-        
+
         return config
 
     def step(self, action: int = 0) -> GYM_STEP_RETURN:
@@ -113,7 +131,9 @@ class PBNEnv(gym.Env):
             reward += self.successful_reward
             done = True
         else:
-            attractors_matched = sum(observation_tuple in attractor for attractor in self.all_attractors)
+            attractors_matched = sum(
+                observation_tuple in attractor for attractor in self.all_attractors
+            )
             reward -= self.wrong_attractor_cost * attractors_matched
 
         if action != 0:
@@ -129,25 +149,41 @@ class PBNEnv(gym.Env):
         """
         return self.PBN.reset(state)
 
-    def render(self, mode='cli', no_cache: bool = False):
-        if mode == 'cli':
+    def render(self, mode="cli", no_cache: bool = False):
+        if mode == "cli":
             return self.PBN.state
-        elif mode == 'PBN':
+        elif mode == "PBN":
             return self.PBN.print_PBN(no_cache)
-        elif mode == 'STG':
+        elif mode == "STG":
             return self.PBN.print_STG(no_cache)
-        elif mode == 'funcs':
+        elif mode == "funcs":
             return self.PBN.print_functions()
+        elif mode == "idx":
+            return self._state_to_idx(self.PBN.state)
         else:
             raise Exception(f'Unrecognised mode "{mode}"')
 
+    def _state_to_idx(self, state: STATE):
+        return int(
+            "".join([str(x) for x in np.array(state, dtype=np.int8).tolist()]), 2
+        )
+
     def compute_attractors(self):
-        STG = self.render(mode = 'STG')
+        print("Computing attractors...")
+        STG = self.render(mode="STG")
         generator = nx.algorithms.components.attracting_components(STG)
         return self._nx_attractors_to_tuples(list(generator))
 
     def _nx_attractors_to_tuples(self, attractors):
-        return [set([tuple([int(x) for x in state.lstrip('[').rstrip(']').split()]) for state in list(attractor)]) for attractor in attractors]
+        return [
+            set(
+                [
+                    tuple([int(x) for x in state.lstrip("[").rstrip("]").split()])
+                    for state in list(attractor)
+                ]
+            )
+            for attractor in attractors
+        ]
 
     def clip(self, gene_i):
         self.PBN.clip(gene_i)

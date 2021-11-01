@@ -1,18 +1,20 @@
 import copy
 import time
-from typing import Union, List
+from typing import List, Union
 
-import numpy as np
 import networkx as nx
-
+import numpy as np
+from gym_PBN.types import LOGIC_FUNC_DATA, PBN_DATA, STATE, TRUTH_TABLE
 from gym_PBN.utils import booleanize
 from gym_PBN.utils.converters import logic_funcs_to_PBN_data
-from gym_PBN.types import LOGIC_FUNC_DATA, PBN_DATA, STATE, TRUTH_TABLE
 
 from .node import Node
 
-class PBN():
-    def __init__(self, PBN_data: PBN_DATA = [], logic_func_data: LOGIC_FUNC_DATA = None):
+
+class PBN:
+    def __init__(
+        self, PBN_data: PBN_DATA = [], logic_func_data: LOGIC_FUNC_DATA = None
+    ):
         """Construct a PBN from given PBN data.
 
         Args:
@@ -44,7 +46,9 @@ class PBN():
         PBN_data = self._logic_funcs_to_pbn_data(logic_func_data)
         self._init_from_pbn_data(PBN_data)
 
-    def reset(self, state: Union[List[Union[int, bool]], np.ndarray, None] = None) -> STATE:
+    def reset(
+        self, state: Union[List[Union[int, bool]], np.ndarray, None] = None
+    ) -> STATE:
         """Set the state of the PBN to a particular one.
 
         args:
@@ -55,9 +59,15 @@ class PBN():
             self.state = np.random.rand(self.N) > 0.5
         else:
             if len(state) != self.N:
-                raise Exception(f'The length of the state given ({len(state)}) is different from the PBN size ({self.N}).')
+                raise Exception(
+                    f"The length of the state given ({len(state)}) is different from the PBN size ({self.N})."
+                )
 
-            self.state = np.array(state, dtype=bool) if type(state) != np.ndarray else state.astype(bool)
+            self.state = (
+                np.array(state, dtype=bool)
+                if type(state) != np.ndarray
+                else state.astype(bool)
+            )
         return self.state
 
     def flip(self, index: int):
@@ -70,23 +80,23 @@ class PBN():
 
     def step(self):
         """Perform a step of natural evolution."""
-        self.state = np.array([node.compute_next_value(self.state) for node in self.nodes], dtype=bool)
+        self.state = np.array(
+            [node.compute_next_value(self.state) for node in self.nodes], dtype=bool
+        )
 
     def name_nodes(self, names: List[str]):
         for i in range(self.N):
             self.nodes[i].name = names[i]
 
     def get_node_by_name(self, name: str) -> Node:
-        """Get the appropriate node object given the name of the node.
-        """
+        """Get the appropriate node object given the name of the node."""
         for node in self.nodes:
             if node.name == name:
                 return node
         raise Exception(f'Node with name "{name}" not found.')
-        
+
     def print_functions(self) -> List[TRUTH_TABLE]:
-        """Print the functions of the PBN to inspect visually.
-        """
+        """Print the functions of the PBN to inspect visually."""
         return [node.function for node in self.nodes]
 
     def print_PBN(self, no_cache: bool = False) -> nx.DiGraph:
@@ -100,7 +110,9 @@ class PBN():
 
             for node in self.nodes:
                 input_nodes = self.nodes[node.input_mask]
-                G.add_edges_from([(input_node.name, node.name) for input_node in input_nodes])
+                G.add_edges_from(
+                    [(input_node.name, node.name) for input_node in input_nodes]
+                )
 
             self.PBN_graph = G
 
@@ -155,7 +167,7 @@ class PBN():
         for i in range(self.N):
             prob_true = self.nodes[i].get_next_value_prob(state)
             probs = np.array([1 - prob_true, prob_true])
-            probabilities[:,i] = probs
+            probabilities[:, i] = probs
 
         prob_to_states = self._probs_to_states(probabilities)
 
@@ -180,32 +192,37 @@ class PBN():
             probs [float]: Probabilities of each gene being true in the next state.
 
         returns:
-           List of tuples. Each tuple is a possible next state with according probability. 
+           List of tuples. Each tuple is a possible next state with according probability.
         """
         _, n_genes = probs.shape
 
         protostate = np.ones(n_genes, dtype=float) * 0.5
         protoprob = 1
-        
+
         prostate = [(protostate, protoprob)]
         for gene_i in range(n_genes):
-            p = probs[:,gene_i]
+            p = probs[:, gene_i]
             if p[0] == 1 or p[0] == 0:
                 # Deterministic. Mainly for optimisation.
                 for pro in prostate:
-                    protostate, protoprob = pro #Go through each next-state already computed, unpack them
-                    protostate[gene_i] = p[1] #Set the value of the gene to the corresponding value.
+                    (
+                        protostate,
+                        protoprob,
+                    ) = pro  # Go through each next-state already computed, unpack them
+                    protostate[gene_i] = p[
+                        1
+                    ]  # Set the value of the gene to the corresponding value.
             else:
                 prostate_copy = []
                 for pro in prostate:
                     pro_1, prob_1 = copy.deepcopy(pro)
                     pro_2, prob_2 = copy.deepcopy(pro)
 
-                    pro_1[gene_i] = 0 #Set value to 0
-                    pro_2[gene_i] = 1 #Set value to 1
-                    prob_1 *= p[0] #Set probability to that value being 0
-                    prob_2 *= p[1] #^^^
-                    #Put them back in.
+                    pro_1[gene_i] = 0  # Set value to 0
+                    pro_2[gene_i] = 1  # Set value to 1
+                    prob_1 *= p[0]  # Set probability to that value being 0
+                    prob_2 *= p[1]  # ^^^
+                    # Put them back in.
                     protostate_1 = (pro_1, prob_1)
                     protostate_2 = (pro_2, prob_2)
                     prostate_copy.append(protostate_1)

@@ -1,12 +1,13 @@
 import pathlib
-from setuptools import setup, find_packages
+
+from setuptools import find_packages, setup
 
 CURRENT_PATH = pathlib.Path(__file__).parent
 README = (CURRENT_PATH / "README.md").read_text()
 
 setup(
-    name='gym-PBN',
-    version='1.0.1',
+    name="gym-PBN",
+    version="1.0.2",
     description="An OpenAI Gym modelling Probabilistic Boolean Networks and Probabilistic Boolean Control Networks.",
     long_description=README,
     long_description_content_type="text/markdown",
@@ -23,5 +24,5 @@ setup(
     ],
     packages=find_packages(),
     install_requires=["gym", "networkx", "numpy"],
-    python_requires='>3.6',
+    python_requires=">3.6",
 )

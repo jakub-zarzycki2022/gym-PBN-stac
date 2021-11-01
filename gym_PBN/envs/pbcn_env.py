@@ -1,19 +1,23 @@
-from typing import Tuple
+from typing import Tuple, Union
 
-from gym.spaces import MultiBinary
 import networkx as nx
-
-from .pbn_env import PBNEnv
-from .common.pbcn import PBCN
+from gym.spaces import MultiBinary
 from gym_PBN.types import GYM_STEP_RETURN, REWARD, STATE, TERMINATED
+
+from .common.pbcn import PBCN
+from .pbn_env import PBNEnv
 
 
 class PBCNEnv(PBNEnv):
-    metadata = {
-        "render.modes": ["cli", "PBN", "STG", "funcs"]
-    }
+    metadata = {"render.modes": ["cli", "PBN", "STG", "funcs", "idx"]}
 
-    def __init__(self, PBN_data = [], logic_func_data = None, goal_config: dict = None, reward_config: dict = None):
+    def __init__(
+        self,
+        PBN_data=[],
+        logic_func_data=None,
+        goal_config: dict = None,
+        reward_config: dict = None,
+    ):
         super().__init__(PBN_data, logic_func_data, goal_config, reward_config)
 
         # Switch to PBCN
@@ -33,15 +37,18 @@ class PBCNEnv(PBNEnv):
             reward += self.successful_reward
             done = True
         else:
-            attractors_matched = sum(observation_tuple in attractor for attractor in self.all_attractors)
+            attractors_matched = sum(
+                observation_tuple in attractor for attractor in self.all_attractors
+            )
             reward -= self.wrong_attractor_cost * attractors_matched
 
         return reward, done
 
-    def step(self, action: Tuple[int]) -> GYM_STEP_RETURN:
+    def step(self, action: Union[Tuple[int], int]) -> GYM_STEP_RETURN:
+        # TODO support int actions
         if not self.action_space.contains(action):
             raise Exception(f"Invalid action {action}, not in action space.")
-        
+
         self.PBN.apply_control(action)
 
         self.PBN.step()
@@ -55,6 +62,7 @@ class PBCNEnv(PBNEnv):
     def compute_attractors(self):
         attractor_sets = []
         for action in self.PBN.control_actions:
+            print(f"Computing attractors for action {action}...")
             self.PBN.apply_control(action)
             STG = self.render(mode="STG", no_cache=True)
             generator = nx.algorithms.components.attracting_components(STG)

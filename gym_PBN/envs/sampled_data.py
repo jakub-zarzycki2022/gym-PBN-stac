@@ -16,6 +16,7 @@ class PBNSampledDataEnv(PBNEnv):
         self,
         PBN_data=[],
         logic_func_data=None,
+        name: str = None,
         goal_config: dict = None,
         reward_config: dict = None,
         gamma: float = 0.99,
@@ -24,6 +25,7 @@ class PBNSampledDataEnv(PBNEnv):
         super().__init__(
             PBN_data=PBN_data,
             logic_func_data=logic_func_data,
+            name=name,
             goal_config=goal_config,
             reward_config=reward_config,
         )
@@ -34,7 +36,9 @@ class PBNSampledDataEnv(PBNEnv):
         # Gym
         self.T = T if T is not None else 2 ** self.PBN.N
         self.primitive_action_space = spaces.Discrete(self.PBN.N + 1)
-        self.interval_space = DiscreteRange(1, self.T)
+        self.interval_space = DiscreteRange(
+            1, self.T
+        )  # TODO remove when Gym 0.22.0 comes out
         self.action_space = spaces.Tuple(
             (self.primitive_action_space, self.interval_space)
         )
@@ -63,11 +67,16 @@ class PBNSampledDataEnv(PBNEnv):
             reward, done = self._get_reward(observation, control_action)
             total_reward += (self.gamma ** i) * reward
 
-        return observation, total_reward, done, {
-            "control_action": control_action,
-            "interval": i,
-            "observation_idx": self._state_to_idx(observation)
-        }
+        return (
+            observation,
+            total_reward,
+            done,
+            {
+                "control_action": control_action,
+                "interval": i,
+                "observation_idx": self._state_to_idx(observation),
+            },
+        )
 
 
 class PBCNSampledDataEnv(PBCNEnv):
@@ -75,12 +84,13 @@ class PBCNSampledDataEnv(PBCNEnv):
         self,
         PBN_data=[],
         logic_func_data=None,
+        name: str = None,
         goal_config: dict = None,
         reward_config: dict = None,
         gamma: float = 0.99,
         T: int = None,
     ):
-        super().__init__(PBN_data, logic_func_data, goal_config, reward_config)
+        super().__init__(PBN_data, logic_func_data, name, goal_config, reward_config)
 
         # Params
         self.gamma = gamma
@@ -92,12 +102,14 @@ class PBCNSampledDataEnv(PBCNEnv):
         self.T = T if T is not None else 2 ** self.PBN.N
         self.primitive_action_space = spaces.MultiBinary(self.PBN.M)
         self.primitive_action_space.dtype = bool
-        self.interval_space = DiscreteRange(1, self.T)
+        self.interval_space = DiscreteRange(
+            1, self.T
+        )  # TODO remove when Gym 0.22.0 comes out
         self.action_space = spaces.Tuple(
             (self.primitive_action_space, self.interval_space)
         )
         self.discrete_action_space = spaces.Discrete(
-            self.primitive_action_space.n * self.interval_space.n
+            (2 ** self.primitive_action_space.n) * self.interval_space.n
         )
 
     def _idx_to_macro_action(self, i: int) -> PBCN_MACRO_ACTION:
@@ -142,7 +154,6 @@ class PBCNSampledDataEnv(PBCNEnv):
             # Penalize overshooting the attractor
             if done_step is not None:
                 reward -= self.successful_reward
-                # reward -= 8 * time_step_cost
             elif done:
                 done_step = i
 
@@ -154,7 +165,7 @@ class PBCNSampledDataEnv(PBCNEnv):
             done,
             {
                 "control_action": control_action,
-                "interval": interval,
+                "interval": i + 1,
                 "observation_idx": self._state_to_idx(observation),
             },
         )

@@ -1,24 +1,26 @@
 from typing import Tuple, Union
 
 import networkx as nx
-from gym.spaces import MultiBinary
+from gym.spaces import Discrete, MultiBinary
 from gym_PBN.types import GYM_STEP_RETURN, REWARD, STATE, TERMINATED
+from gym_PBN.utils import booleanize
 
 from .common.pbcn import PBCN
 from .pbn_env import PBNEnv
 
 
 class PBCNEnv(PBNEnv):
-    metadata = {"render.modes": ["cli", "PBN", "STG", "funcs", "idx"]}
+    metadata = {"render.modes": ["cli", "PBN", "STG", "funcs", "idx", "float"]}
 
     def __init__(
         self,
         PBN_data=[],
         logic_func_data=None,
+        name: str = None,
         goal_config: dict = None,
         reward_config: dict = None,
     ):
-        super().__init__(PBN_data, logic_func_data, goal_config, reward_config)
+        super().__init__(PBN_data, logic_func_data, name, goal_config, reward_config)
 
         # Switch to PBCN
         self.PBN = PBCN(PBN_data, logic_func_data)
@@ -28,6 +30,7 @@ class PBCNEnv(PBNEnv):
         self.observation_space.dtype = bool
         self.action_space = MultiBinary(self.PBN.M)
         self.action_space.dtype = bool
+        self.discrete_action_space = Discrete(2 ** self.action_space.n)
 
     def _get_reward(self, observation: STATE) -> Tuple[REWARD, TERMINATED]:
         reward, done = 0, False
@@ -45,7 +48,9 @@ class PBCNEnv(PBNEnv):
         return reward, done
 
     def step(self, action: Union[Tuple[int], int]) -> GYM_STEP_RETURN:
-        # TODO support int actions
+        if type(action) is int:
+            action = booleanize(action, self.action_space.n)
+
         if not self.action_space.contains(action):
             raise Exception(f"Invalid action {action}, not in action space.")
 
@@ -55,7 +60,7 @@ class PBCNEnv(PBNEnv):
 
         observation = self.PBN.state
         reward, done = self._get_reward(observation)
-        info = {}
+        info = {"observation_idx": self._state_to_idx(observation)}
 
         return observation, reward, done, info
 

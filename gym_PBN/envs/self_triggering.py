@@ -17,6 +17,7 @@ class PBNSelfTriggeringEnv(PBNEnv):
         self,
         PBN_data=[],
         logic_func_data=None,
+        name: str = None,
         goal_config: dict = None,
         reward_config: dict = None,
         gamma: float = 0.99,
@@ -25,6 +26,7 @@ class PBNSelfTriggeringEnv(PBNEnv):
         super().__init__(
             PBN_data=PBN_data,
             logic_func_data=logic_func_data,
+            name=name,
             goal_config=goal_config,
             reward_config=reward_config,
         )
@@ -35,7 +37,9 @@ class PBNSelfTriggeringEnv(PBNEnv):
         # Gym
         self.T = T
         self.primitive_action_space = spaces.Discrete(self.PBN.N + 1)
-        self.prob_space = DiscreteRange(1, 9)  # {0.1, 0.2, ..., 0.9}
+        self.prob_space = DiscreteRange(
+            1, 10
+        )  # {0.1, 0.2, ..., 0.9}, TODO remove when Gym 0.22.0 comes out
         self.action_space = spaces.Tuple((self.primitive_action_space, self.prob_space))
         self.discrete_action_space = spaces.Discrete(
             self.primitive_action_space.n * self.prob_space.n
@@ -43,7 +47,7 @@ class PBNSelfTriggeringEnv(PBNEnv):
 
         # Reward hardcode
         self.successful_reward = 1
-        self.wrong_attractor_cost = 1
+        self.wrong_attractor_cost = 0
         self.action_cost = 1
 
     def step(self, action: Tuple[int, int]) -> GYM_STEP_RETURN:
@@ -86,12 +90,13 @@ class PBCNSelfTriggeringEnv(PBCNEnv):
         self,
         PBN_data=[],
         logic_func_data=None,
+        name: str = None,
         goal_config: dict = None,
         reward_config: dict = None,
         gamma: float = 0.99,
         T: int = None,
     ):
-        super().__init__(PBN_data, logic_func_data, goal_config, reward_config)
+        super().__init__(PBN_data, logic_func_data, name, goal_config, reward_config)
 
         # Params
         self.gamma = gamma
@@ -103,10 +108,12 @@ class PBCNSelfTriggeringEnv(PBCNEnv):
         self.T = T
         self.primitive_action_space = spaces.MultiBinary(self.PBN.M)
         self.primitive_action_space.dtype = bool
-        self.prob_space = DiscreteRange(1, 9)  # 0.1 to 0.9
+        self.prob_space = DiscreteRange(
+            1, 10
+        )  # 0.1 to 1, TODO remove when Gym 0.22.0 comes out
         self.action_space = spaces.Tuple((self.primitive_action_space, self.prob_space))
         self.discrete_action_space = spaces.Discrete(
-            self.primitive_action_space.n * self.prob_space.n
+            (2 ** self.primitive_action_space.n) * self.prob_space.n
         )
 
         # Reward hardcode
@@ -133,11 +140,14 @@ class PBCNSelfTriggeringEnv(PBCNEnv):
 
             action = self._idx_to_macro_action(action)
 
+        if type(action[1]) is float:  # Adjust if float was passed in
+            action = (action[0], int(action[1] * 10))
+
         if not self.action_space.contains(action):
             raise Exception(f"Invalid action {action}, not in action space.")
 
         control_action, prob = action
-        prob /= 10  # convert value in [1,9] to [0.1, 0.2, ..., 0.9]
+        prob /= 10  # convert value in [1,9] to [0.1, 0.2, ..., 0.9, 1]
 
         total_reward, i, end = 0, 0, False
         while not end:
@@ -150,8 +160,8 @@ class PBCNSelfTriggeringEnv(PBCNEnv):
             # Calculate reward
             observation = self.PBN.state
             reward, done = self._get_reward(observation)
-            reward -= 1
-            total_reward += (self.gamma ** i) * reward
+            reward -= 1  # Time step cost not in the original reward function
+            total_reward += (self.gamma ** i) * reward  # Internal reward discounting
             i += 1
             end = random.uniform(0, 1) <= prob or i == self.T
 
@@ -163,5 +173,6 @@ class PBCNSelfTriggeringEnv(PBCNEnv):
                 "control_action": control_action,
                 "interval": i,
                 "observation_idx": self._state_to_idx(observation),
+                "T": self.T,
             },
         )

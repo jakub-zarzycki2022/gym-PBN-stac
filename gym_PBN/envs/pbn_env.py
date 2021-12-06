@@ -10,12 +10,13 @@ from .common.pbn import PBN
 
 
 class PBNEnv(gym.Env):
-    metadata = {"render.modes": ["cli", "PBN", "STG", "funcs", "idx"]}
+    metadata = {"render.modes": ["cli", "PBN", "STG", "funcs", "idx", "float"]}
 
     def __init__(
         self,
         PBN_data=[],
         logic_func_data=None,
+        name: str = None,
         goal_config: dict = None,
         reward_config: dict = None,
     ):
@@ -53,6 +54,7 @@ class PBNEnv(gym.Env):
         self.observation_space = MultiBinary(self.PBN.N)
         self.observation_space.dtype = bool
         self.action_space = Discrete(self.PBN.N + 1)
+        self.name = name
 
     def _check_config(
         self,
@@ -110,7 +112,7 @@ class PBNEnv(gym.Env):
 
         observation = self.PBN.state
         reward, done = self._get_reward(observation, action)
-        info = {}
+        info = {"observation_idx": self._state_to_idx(observation)}
 
         return observation, reward, done, info
 
@@ -149,6 +151,9 @@ class PBNEnv(gym.Env):
         """
         return self.PBN.reset(state)
 
+    def set_state(self, state: Union[List[Union[int, bool]], np.ndarray, None]):
+        return self.PBN.reset(state)
+
     def render(self, mode="cli", no_cache: bool = False):
         if mode == "cli":
             return self.PBN.state
@@ -160,6 +165,8 @@ class PBNEnv(gym.Env):
             return self.PBN.print_functions()
         elif mode == "idx":
             return self._state_to_idx(self.PBN.state)
+        elif mode == "float":
+            return [float(x) for x in self.PBN.state]
         else:
             raise Exception(f'Unrecognised mode "{mode}"')
 

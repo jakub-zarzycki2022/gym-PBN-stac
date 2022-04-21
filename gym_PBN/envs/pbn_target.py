@@ -10,7 +10,9 @@ from .bittner import base
 
 
 class PBNTargetEnv(gym.Env):
-    metadata = {"render.modes": ["human", "dict", "PBN", "STG", "idx", "float"]}
+    metadata = {
+        "render.modes": ["human", "dict", "PBN", "STG", "idx", "float", "target"]
+    }
 
     def __init__(
         self,
@@ -173,14 +175,19 @@ class PBNTargetEnv(gym.Env):
             return self._state_to_idx(self.graph.getState())
         elif mode == "float":
             return [float(x) for x in self.graph.getState()]
+        elif mode == "target":
+            state = self.graph.getState()
+            return [state[node] for node in self.target_nodes]
+        elif mode == "target_idx":
+            target_state = self.render(mode="target")
+            return self._state_to_idx(target_state)
         else:
             raise Exception(f'Unrecognised mode "{mode}"')
 
     def _state_to_idx(self, state: STATE):
-        return int(
-            "".join([str(x) for x in list(state.values())]),
-            2,
-        )
+        if type(state) is dict:
+            state = list(state.values())
+        return int("".join([str(x) for x in state]), 2)
 
     def compute_attractors(self):
         print("Computing attractors...")

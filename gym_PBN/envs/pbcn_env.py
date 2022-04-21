@@ -10,7 +10,7 @@ from .pbn_env import PBNEnv
 
 
 class PBCNEnv(PBNEnv):
-    metadata = {"render.modes": ["cli", "PBN", "STG", "funcs", "idx", "float"]}
+    metadata = {"render.modes": ["human", "PBN", "STG", "funcs", "idx", "float"]}
 
     def __init__(
         self,
@@ -30,7 +30,7 @@ class PBCNEnv(PBNEnv):
         self.observation_space.dtype = bool
         self.action_space = MultiBinary(self.PBN.M)
         self.action_space.dtype = bool
-        self.discrete_action_space = Discrete(2 ** self.action_space.n)
+        self.discrete_action_space = Discrete(2**self.action_space.n)
 
     def _get_reward(self, observation: STATE) -> Tuple[REWARD, TERMINATED]:
         reward, done = 0, False

@@ -10,7 +10,7 @@ from .common.pbn import PBN
 
 
 class PBNEnv(gym.Env):
-    metadata = {"render.modes": ["cli", "PBN", "STG", "funcs", "idx", "float"]}
+    metadata = {"render.modes": ["human", "PBN", "STG", "funcs", "idx", "float"]}
 
     def __init__(
         self,
@@ -105,8 +105,7 @@ class PBNEnv(gym.Env):
             raise Exception(f"Invalid action {action}, not in action space.")
 
         if action != 0:  # Action 0 is taking no action.
-            action -= 1
-            self.PBN.flip(action)
+            self.PBN.flip(action - 1)
 
         self.PBN.step()
 
@@ -143,19 +142,15 @@ class PBNEnv(gym.Env):
 
         return reward, done
 
-    def reset(self, state: Union[List[Union[int, bool]], np.ndarray, None] = None):
-        """Reset the environment. Either initialise it to a random state, or to a certain state.
-
-        Args:
-            state (Union[List[Union[int, bool]], np.ndarray, None], optional): The state to initialise the environment to. Can be either a Python list or a NumPy array. Defaults to None.
-        """
-        return self.PBN.reset(state)
+    def reset(self):
+        """Reset the environment. Initialise it to a random state."""
+        return self.PBN.reset()
 
     def set_state(self, state: Union[List[Union[int, bool]], np.ndarray, None]):
         return self.PBN.reset(state)
 
-    def render(self, mode="cli", no_cache: bool = False):
-        if mode == "cli":
+    def render(self, mode="human", no_cache: bool = False):
+        if mode == "human":
             return self.PBN.state
         elif mode == "PBN":
             return self.PBN.print_PBN(no_cache)

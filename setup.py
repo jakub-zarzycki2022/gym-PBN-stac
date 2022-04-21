@@ -23,6 +23,6 @@ setup(
         "Topic :: Scientific/Engineering :: Artificial Intelligence",
     ],
     packages=find_packages(),
-    install_requires=["gym", "networkx", "numpy"],
+    install_requires=["gym", "networkx", "numpy", "scipy", "xlrd"],
     python_requires=">3.6",
 )

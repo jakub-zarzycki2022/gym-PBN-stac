@@ -52,7 +52,6 @@ class PBNTargetEnv(gym.Env):
 
         # Gym
         self.observation_space = MultiBinary(self.graph.N)
-        self.observation_space.dtype = bool
         # intervention nodes + no action
         self.action_space = Discrete(len(self.intervene_on) + 1)
         self.name = name

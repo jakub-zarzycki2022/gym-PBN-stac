@@ -1,3 +1,4 @@
+import random
 from typing import List, Set, Tuple, Union
 
 import gym
@@ -27,7 +28,7 @@ class PBNTargetEnv(gym.Env):
         goal_config = self._check_config(
             goal_config,
             "goal",
-            set(["target_nodes", "target_node_values", "intervene_on"]),
+            set(["target_nodes", "target_node_values", "intervene_on", "horizon"]),
         )
         if goal_config is None:
             raise ValueError(
@@ -36,6 +37,7 @@ class PBNTargetEnv(gym.Env):
         self.target_nodes = goal_config["target_nodes"]
         self.target_node_values = goal_config["target_node_values"]
         self.intervene_on = goal_config["intervene_on"]
+        self.horizon = goal_config["horizon"]
 
         # Reward configuration
         reward_config = self._check_config(
@@ -57,6 +59,9 @@ class PBNTargetEnv(gym.Env):
         # intervention nodes + no action
         self.action_space = Discrete(len(self.intervene_on) + 1)
         self.name = name
+
+        # State
+        self.n_steps = 0
 
     def _check_config(
         self,
@@ -106,6 +111,8 @@ class PBNTargetEnv(gym.Env):
         if not self.action_space.contains(action):
             raise Exception(f"Invalid action {action}, not in action space.")
 
+        self.n_steps += 1
+
         if action != 0:  # Action 0 is taking no action.
             _id = self.graph.getIDs().index(self.intervene_on[action - 1])
             self.graph.flipNode(_id)
@@ -113,10 +120,11 @@ class PBNTargetEnv(gym.Env):
         self.graph.step()
 
         observation = self.graph.getState()
-        reward, done = self._get_reward(observation, action)
+        reward, done, won = self._get_reward(observation, action)
         info = {
             "observation_idx": self.render(mode="idx"),
             "observation_dict": self.render(mode="dict"),
+            "won": won,
         }
 
         return self.render(mode="human"), reward, done, info
@@ -128,7 +136,9 @@ class PBNTargetEnv(gym.Env):
             state = dict(zip(ids, state))
         return state
 
-    def _get_reward(self, observation: STATE, action: int) -> Tuple[REWARD, TERMINATED]:
+    def _get_reward(
+        self, observation: STATE, action: int
+    ) -> Tuple[REWARD, TERMINATED, bool]:
         """The Reward function.
 
         Args:
@@ -136,7 +146,7 @@ class PBNTargetEnv(gym.Env):
             action (int): The action taken.
 
         Returns:
-            Tuple[REWARD, TERMINATED]: Tuple of the reward and the environment done status.
+            Tuple[REWARD, TERMINATED, bool]: Tuple of the reward and the environment done status.
         """
         reward, done = 0, False
         observation = self._to_map(observation)  # HACK Needed for some envs
@@ -153,10 +163,11 @@ class PBNTargetEnv(gym.Env):
         if action != 0:
             reward -= self.action_cost
 
-        return reward, done
+        return reward, done or self.n_steps == self.horizon, done
 
     def reset(self):
         """Reset the environment. Initialise it to a random state, or to a certain state."""
+        self.n_steps = 0
         return self.graph.genRandState()
 
     def set_state(self, state: Union[List[Union[int, bool]], np.ndarray, None]):
@@ -205,6 +216,10 @@ class PBNTargetEnv(gym.Env):
             )
             for attractor in attractors
         ]
+
+    def seed(self, seed):
+        np.random.seed(seed)
+        random.seed(seed)
 
     def close(self):
         """Close out the environment and make sure everything is garbage collected."""

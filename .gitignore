@@ -127,3 +127,9 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# Other
+bittner_data/
+gen_bittner.py
+**/n_28.pkl
+**/n_70.pkl

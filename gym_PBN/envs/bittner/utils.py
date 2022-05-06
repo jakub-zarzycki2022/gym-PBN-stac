@@ -8,7 +8,7 @@ import xlrd
 from gym_PBN.envs.bittner import gen
 
 
-def spawn(includeIDs, Q_method, Q_axis, predictorN, file, predictorSetsPath):
+def spawn(includeIDs, Q_method, Q_axis, predictorN, file, predictorSetsPath, hack=28):
     # Loading xls
     genebook = xlrd.open_workbook(file)
     genesheet = genebook.sheet_by_name(genebook.sheets()[1].name)
@@ -39,12 +39,8 @@ def spawn(includeIDs, Q_method, Q_axis, predictorN, file, predictorSetsPath):
     for i in range(2, genesheet.nrows - 5):
         controlIDs[i - 2] = int(valfunc(genesheet.cell(i, 0)))
         controlNames[i - 2] = valfunc(genesheet.cell(i, 2))
-        # HACK n70
-        # for j in range(36, 43):
-        #     controlData[i - 2, j - 36] = valfunc(genesheet.cell(i, j))
-        # HACK n28
-        for j in range(5, 36):
-            geneData[i - 2, j - 5] = valfunc(genesheet.cell(i, j))
+        for j in range(36, 43):
+            controlData[i - 2, j - 36] = valfunc(genesheet.cell(i, j))
 
     # Getting weights
 
@@ -57,17 +53,18 @@ def spawn(includeIDs, Q_method, Q_axis, predictorN, file, predictorSetsPath):
         weightIDs[i - 2] = int(valfunc(weightsheet.cell(i, 0)))
         weightValues[i - 2] = valfunc(weightsheet.cell(i, 3))
 
-    # HACK n70
-    # def appendExtraID(existing_list, tot_len, pool):
-    #     n = len(existing_list)
-    #     i = 0
-    #     while n < tot_len:
-    #         if not pool[i] in existing_list:
-    #             existing_list.append(pool[i])
-    #             n += 1
-    #         i += 1
+    def appendExtraID(existing_list, tot_len, pool):
+        n = len(existing_list)
+        i = 0
+        while n < tot_len:
+            if not pool[i] in existing_list:
+                existing_list.append(pool[i])
+                n += 1
+            i += 1
 
-    # appendExtraID(includeIDs, 70, weightIDs)
+    # HACK
+    if hack == 70:
+        appendExtraID(includeIDs, 70, weightIDs)
 
     # Calling the function
 
@@ -82,7 +79,7 @@ def spawn(includeIDs, Q_method, Q_axis, predictorN, file, predictorSetsPath):
 
     env = gen.generatePBNGenes(
         dataGroup,
-        28,  # HACK n70
+        hack,  # HACK
         None,
         includeIDs,
         2,

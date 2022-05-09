@@ -122,12 +122,12 @@ class PBNTargetEnv(gym.Env):
         observation = self.graph.getState()
         reward, done, won = self._get_reward(observation, action)
         info = {
-            "observation_idx": self.render(mode="idx"),
-            "observation_dict": self.render(mode="dict"),
+            "observation_idx": self._state_to_idx(self.graph.getState()),
+            "observation_dict": self.graph.getState(),
             "won": won,
         }
 
-        return self.render(mode="human"), reward, done, info
+        return self.get_state(), reward, done, info
 
     def _to_map(self, state):
         getIDs = getattr(self.graph, "getIDs", None)
@@ -165,17 +165,25 @@ class PBNTargetEnv(gym.Env):
 
         return reward, done or self.n_steps == self.horizon, done
 
-    def reset(self):
+    def reset(self, seed=None):
         """Reset the environment. Initialise it to a random state, or to a certain state."""
+        if seed:
+            np.random.seed(seed)
+            random.seed(seed)
+
         self.n_steps = 0
-        return self.graph.genRandState()
+        self.graph.genRandState()
+        return self.get_state()
 
     def set_state(self, state: Union[List[Union[int, bool]], np.ndarray, None]):
         return self.graph.setState(state)
 
+    def get_state(self):
+        return list(self.graph.getState().values())
+
     def render(self, mode="human", no_cache: bool = False):
         if mode == "human":
-            return list(self.graph.getState().values())
+            return self.get_state()
         if mode == "dict":
             return self.graph.getState()
         elif mode == "PBN":
@@ -216,10 +224,6 @@ class PBNTargetEnv(gym.Env):
             )
             for attractor in attractors
         ]
-
-    def seed(self, seed):
-        np.random.seed(seed)
-        random.seed(seed)
 
     def close(self):
         """Close out the environment and make sure everything is garbage collected."""

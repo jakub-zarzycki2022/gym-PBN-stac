@@ -22,6 +22,7 @@ class PBNTargetEnv(gym.Env):
         goal_config: dict,
         name: str = None,
         reward_config: dict = None,
+        end_episode_on_success: bool = False,
     ):
         self.graph = graph
 
@@ -29,7 +30,14 @@ class PBNTargetEnv(gym.Env):
         goal_config = self._check_config(
             goal_config,
             "goal",
-            set(["target_nodes", "target_node_values", "intervene_on", "horizon"]),
+            set(
+                [
+                    "target_nodes",
+                    "target_node_values",
+                    "undesired_node_values",
+                    "intervene_on",
+                ]
+            ),
         )
         if goal_config is None:
             raise ValueError(
@@ -37,7 +45,14 @@ class PBNTargetEnv(gym.Env):
             )
         self.target_nodes = goal_config["target_nodes"]
         self.target_node_values = goal_config["target_node_values"]
+        self.undesired_node_values = goal_config["undesired_node_values"]
         self.intervene_on = goal_config["intervene_on"]
+        self.end_episode_on_success = end_episode_on_success
+
+        if "horizon" in goal_config.keys():
+            self.horizon = goal_config["horizon"]
+        else:
+            self.horizon = 11
 
         # Reward configuration
         reward_config = self._check_config(
@@ -45,7 +60,7 @@ class PBNTargetEnv(gym.Env):
             "reward",
             set(["successful_reward", "wrong_attractor_cost", "action_cost"]),
             default_values={
-                "successful_reward": 5,
+                "successful_reward": 10,
                 "wrong_attractor_cost": 2,
                 "action_cost": 1,
             },
@@ -151,13 +166,18 @@ class PBNTargetEnv(gym.Env):
             [observation[x] for x in self.target_nodes]
         )  # Filter it down
 
-        if observation == self.target_node_values:
+        if observation in self.target_node_values:
             reward += self.successful_reward
-        else:
+            done = done or self.end_episode_on_success
+        elif observation in self.undesired_node_values:
             reward -= self.wrong_attractor_cost
+        else:
+            reward -= self.successful_reward
 
         if action != 0:
             reward -= self.action_cost
+
+        done = done or (self.end_episode_on_success and self.n_steps == self.horizon)
 
         return reward, done
 
@@ -275,7 +295,8 @@ class Bittner28(PBNTargetEnv):
         goal_config = {
             "target_nodes": [324901],
             "intervene_on": [234237],
-            "target_node_values": (0,),
+            "target_node_values": ((0,),),
+            "undesired_node_values": tuple(),
         }
         super().__init__(graph, goal_config, name, reward_config)
 
@@ -300,6 +321,7 @@ class Bittner70(PBNTargetEnv):
         goal_config = {
             "target_nodes": [324901],
             "intervene_on": [234237],
-            "target_node_values": (0,),
+            "target_node_values": ((0,),),
+            "undesired_node_values": tuple(),
         }
         super().__init__(graph, goal_config, name, reward_config)

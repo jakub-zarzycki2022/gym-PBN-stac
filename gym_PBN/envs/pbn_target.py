@@ -281,7 +281,13 @@ class Bittner28(PBNTargetEnv):
         418105,
     ]
 
-    def __init__(self, name: str = "Bittner-28", reward_config: dict = None):
+    def __init__(
+        self,
+        name: str = "Bittner-28",
+        horizon: int = 11,
+        reward_config: dict = None,
+        end_episode_on_success: bool = False,
+    ):
         graph = utils.spawn(
             self.includeIDs,
             Q_method="median",
@@ -297,8 +303,11 @@ class Bittner28(PBNTargetEnv):
             "intervene_on": [234237],
             "target_node_values": ((0,),),
             "undesired_node_values": tuple(),
+            "horizon": horizon,
         }
-        super().__init__(graph, goal_config, name, reward_config)
+        super().__init__(
+            graph, goal_config, name, reward_config, end_episode_on_success
+        )
 
 
 class Bittner70(PBNTargetEnv):
@@ -307,7 +316,13 @@ class Bittner70(PBNTargetEnv):
 
     includeIDs = [234237, 324901, 759948, 25485, 266361, 108208, 130057]
 
-    def __init__(self, name: str = "Bittner-70", reward_config: dict = None):
+    def __init__(
+        self,
+        name: str = "Bittner-70",
+        horizon: int = 11,
+        reward_config: dict = None,
+        end_episode_on_success: bool = False,
+    ):
         graph = utils.spawn(
             self.includeIDs,
             Q_method="k-means",
@@ -323,5 +338,8 @@ class Bittner70(PBNTargetEnv):
             "intervene_on": [234237],
             "target_node_values": ((0,),),
             "undesired_node_values": tuple(),
+            "horizon": horizon,
         }
-        super().__init__(graph, goal_config, name, reward_config)
+        super().__init__(
+            graph, goal_config, name, reward_config, end_episode_on_success
+        )

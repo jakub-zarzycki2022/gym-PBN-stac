@@ -1,5 +1,6 @@
 import random
 from typing import List, Set, Tuple, Union
+from pathlib import Path
 
 import gym
 import networkx as nx
@@ -7,7 +8,7 @@ import numpy as np
 from gym.spaces import Discrete, MultiBinary
 from gym_PBN.types import GYM_STEP_RETURN, REWARD, STATE, TERMINATED
 
-from .bittner import base
+from .bittner import base, utils
 
 
 class PBNTargetEnv(gym.Env):
@@ -37,7 +38,6 @@ class PBNTargetEnv(gym.Env):
         self.target_nodes = goal_config["target_nodes"]
         self.target_node_values = goal_config["target_node_values"]
         self.intervene_on = goal_config["intervene_on"]
-        self.horizon = goal_config["horizon"]
 
         # Reward configuration
         reward_config = self._check_config(
@@ -120,11 +120,10 @@ class PBNTargetEnv(gym.Env):
         self.graph.step()
 
         observation = self.graph.getState()
-        reward, done, won = self._get_reward(observation, action)
+        reward, done = self._get_reward(observation, action)
         info = {
             "observation_idx": self._state_to_idx(self.graph.getState()),
             "observation_dict": self.graph.getState(),
-            "won": won,
         }
 
         return self.get_state(), reward, done, info
@@ -136,9 +135,7 @@ class PBNTargetEnv(gym.Env):
             state = dict(zip(ids, state))
         return state
 
-    def _get_reward(
-        self, observation: STATE, action: int
-    ) -> Tuple[REWARD, TERMINATED, bool]:
+    def _get_reward(self, observation: STATE, action: int) -> Tuple[REWARD, TERMINATED]:
         """The Reward function.
 
         Args:
@@ -156,14 +153,13 @@ class PBNTargetEnv(gym.Env):
 
         if observation == self.target_node_values:
             reward += self.successful_reward
-            done = True
         else:
             reward -= self.wrong_attractor_cost
 
         if action != 0:
             reward -= self.action_cost
 
-        return reward, done or self.n_steps == self.horizon, done
+        return reward, done
 
     def reset(self, seed=None):
         """Reset the environment. Initialise it to a random state, or to a certain state."""
@@ -228,3 +224,82 @@ class PBNTargetEnv(gym.Env):
     def close(self):
         """Close out the environment and make sure everything is garbage collected."""
         del self.graph
+
+
+class Bittner28(PBNTargetEnv):
+    predictor_sets_path = Path(__file__).parent / "bittner" / "data"
+    genedata = predictor_sets_path / "genedata_28.xls"
+
+    includeIDs = [
+        234237,
+        324901,
+        759948,
+        25485,
+        324700,
+        43129,
+        266361,
+        108208,
+        40764,
+        130057,
+        39781,
+        49665,
+        39159,
+        23185,
+        417218,
+        31251,
+        343072,
+        142076,
+        128100,
+        376725,
+        112500,
+        241530,
+        44563,
+        36950,
+        812276,
+        51018,
+        306013,
+        418105,
+    ]
+
+    def __init__(self, name: str = "Bittner-28", reward_config: dict = None):
+        graph = utils.spawn(
+            self.includeIDs,
+            Q_method="median",
+            Q_axis=1,
+            predictorN=15,
+            file=self.genedata,
+            predictorSetsPath=self.predictor_sets_path,
+            hack=28,
+        )
+
+        goal_config = {
+            "target_nodes": [324901],
+            "intervene_on": [234237],
+            "target_node_values": (0,),
+        }
+        super().__init__(graph, goal_config, name, reward_config)
+
+
+class Bittner70(PBNTargetEnv):
+    predictor_sets_path = Path(__file__).parent / "bittner" / "data"
+    genedata = predictor_sets_path / "genedata_70.xls"
+
+    includeIDs = [234237, 324901, 759948, 25485, 266361, 108208, 130057]
+
+    def __init__(self, name: str = "Bittner-70", reward_config: dict = None):
+        graph = utils.spawn(
+            self.includeIDs,
+            Q_method="k-means",
+            Q_axis=1,
+            predictorN=5,
+            file=self.genedata,
+            predictorSetsPath=self.predictor_sets_path,
+            hack=70,
+        )
+
+        goal_config = {
+            "target_nodes": [324901],
+            "intervene_on": [234237],
+            "target_node_values": (0,),
+        }
+        super().__init__(graph, goal_config, name, reward_config)

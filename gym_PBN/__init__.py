@@ -8,14 +8,14 @@ register(
     id="gym-PBN/Bittner-28-v0",
     entry_point="gym_PBN.envs:Bittner28",
     nondeterministic=True,
-    max_episode_steps=300,
+    max_episode_steps=100,
 )
 
 register(
     id="gym-PBN/Bittner-70-v0",
     entry_point="gym_PBN.envs:Bittner70",
     nondeterministic=True,
-    max_episode_steps=300,
+    max_episode_steps=100,
 )
 
 register(id="gym-PBN/PBN-sampled-data-v0", entry_point="gym_PBN.envs:PBNSampledDataEnv")

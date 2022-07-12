@@ -24,6 +24,18 @@ setup(
     ],
     packages=find_packages(),
     package_data={"gym_PBN.envs.bittner": ["data/*.xls", "data/*.p"]},
-    install_requires=["gym", "networkx", "numpy", "scipy", "xlrd"],
+    install_requires=[
+        "gym",
+        "networkx",
+        "numpy",
+        "pandas",
+        "scipy",
+        "sklearn",
+        "tqdm",
+        "psutil",
+    ],
+    extras_require={
+        "dev": ["pytest", "black", "rope"],
+    },
     python_requires=">3.6",
 )

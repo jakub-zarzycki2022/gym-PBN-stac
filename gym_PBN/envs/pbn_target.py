@@ -248,38 +248,11 @@ class PBNTargetEnv(gym.Env):
 
 class Bittner28(PBNTargetEnv):
     predictor_sets_path = Path(__file__).parent / "bittner" / "data"
-    genedata = predictor_sets_path / "genedata_28.xls"
+    genedata = predictor_sets_path / "genedata.xls"
 
-    includeIDs = [
-        234237,
-        324901,
-        759948,
-        25485,
-        324700,
-        43129,
-        266361,
-        108208,
-        40764,
-        130057,
-        39781,
-        49665,
-        39159,
-        23185,
-        417218,
-        31251,
-        343072,
-        142076,
-        128100,
-        376725,
-        112500,
-        241530,
-        44563,
-        36950,
-        812276,
-        51018,
-        306013,
-        418105,
-    ]
+    # fmt: off
+    includeIDs = [234237, 324901, 759948, 25485, 324700, 43129, 266361, 108208, 40764, 130057, 39781, 49665, 39159, 23185,417218, 31251, 343072, 142076, 128100, 376725, 112500, 241530, 44563, 36950, 812276, 51018, 306013, 418105]
+    # fmt: on
 
     def __init__(
         self,
@@ -289,13 +262,12 @@ class Bittner28(PBNTargetEnv):
         end_episode_on_success: bool = False,
     ):
         graph = utils.spawn(
-            self.includeIDs,
-            Q_method="median",
-            Q_axis=1,
-            predictorN=15,
             file=self.genedata,
-            predictorSetsPath=self.predictor_sets_path,
-            hack=28,
+            total_genes=28,
+            include_ids=self.includeIDs,
+            bin_method="median",
+            n_predictors=15,
+            predictor_sets_path=self.predictor_sets_path,
         )
 
         goal_config = {
@@ -312,7 +284,7 @@ class Bittner28(PBNTargetEnv):
 
 class Bittner70(PBNTargetEnv):
     predictor_sets_path = Path(__file__).parent / "bittner" / "data"
-    genedata = predictor_sets_path / "genedata_70.xls"
+    genedata = predictor_sets_path / "genedata.xls"
 
     includeIDs = [234237, 324901, 759948, 25485, 266361, 108208, 130057]
 
@@ -324,13 +296,12 @@ class Bittner70(PBNTargetEnv):
         end_episode_on_success: bool = False,
     ):
         graph = utils.spawn(
-            self.includeIDs,
-            Q_method="k-means",
-            Q_axis=1,
-            predictorN=5,
             file=self.genedata,
-            predictorSetsPath=self.predictor_sets_path,
-            hack=70,
+            total_genes=70,
+            include_ids=self.includeIDs,
+            bin_method="k-means",
+            n_predictors=15,
+            predictor_sets_path=self.predictor_sets_path,
         )
 
         goal_config = {

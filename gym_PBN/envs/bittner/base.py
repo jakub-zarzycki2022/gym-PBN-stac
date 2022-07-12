@@ -26,7 +26,7 @@ class Node:
         self.predictors = []
         self.inputNodes = None
 
-    def addPredictors(self, predictors):
+    def add_predictors(self, predictors):
         IDstoPrint = []
         for COD, A, inputIDs in predictors.T:
             if type(COD) == type(None):
@@ -247,7 +247,7 @@ class Graph:
                 nextStates[state] = p
         return nextStates
 
-    def addNodes(self, nodeList):
+    def add_nodes(self, nodeList):
         self.nodes = nodeList
 
     def addCon(self, conn):

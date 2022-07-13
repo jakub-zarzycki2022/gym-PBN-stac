@@ -1,9 +1,9 @@
 from pathlib import Path
 from typing import List, Tuple
 
-import pandas as pd
 import numpy as np
-from gym_PBN.envs.bittner import gen, base
+import pandas as pd
+from gym_PBN.envs.bittner import base, gen
 from gym_PBN.envs.bittner.gen.binarise import binarise
 
 

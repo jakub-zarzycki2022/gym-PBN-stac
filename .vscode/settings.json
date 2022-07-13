@@ -8,6 +8,7 @@
         "genebook",
         "genesheet",
         "kmeans",
+        "Numba",
         "optimisation",
         "pbar",
         "savepath",

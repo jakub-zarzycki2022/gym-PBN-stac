@@ -1,7 +1,7 @@
-import numpy as np
-import pandas as pd
 import math
 
+import numpy as np
+import pandas as pd
 from scipy.integrate import quad
 from sklearn.cluster import KMeans
 
@@ -78,7 +78,7 @@ class KMeansLegacy:
         self.max_iter = max_iter
 
     def fit_thresholds(self, x):
-        x_log = np.log(x)
+        x_log = np.log1p(x)
 
         # Creating clusters n_runs times
         thresholds = [self.cluster(x_log) for _ in range(self.n_init)]
@@ -89,7 +89,7 @@ class KMeansLegacy:
         ]
 
         # HACK: binary only
-        output = pd.DataFrame(threshold)[0].apply(lambda y: np.exp(y[0]))
+        output = pd.DataFrame(threshold)[0].apply(lambda y: np.expm1(y[0]))
         output.index = x.columns
         return output
 
@@ -180,7 +180,7 @@ class KMeansLegacyV2(KMeansLegacy):
     """Upgraded version of KMeansLegacy to do clustering optimisation for each gene individually."""
 
     def fit_thresholds(self, x):
-        x_log = np.log(x)
+        x_log = np.log1p(x)
         ret = []
 
         # Creating clusters n_runs times
@@ -194,7 +194,7 @@ class KMeansLegacyV2(KMeansLegacy):
             # fmt: on
 
             # HACK: Binary only
-            ret.append(np.exp(threshold[0][0]))
+            ret.append(np.expm1(threshold[0][0]))
 
         ret = pd.Series(ret, index=x.columns)
         return ret

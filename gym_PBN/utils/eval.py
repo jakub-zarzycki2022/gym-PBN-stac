@@ -1,11 +1,13 @@
-from gym_PBN.envs.pbn_target import PBNTargetEnv
-from typing import Iterable
 import itertools
+import multiprocessing
+from functools import partial
+from typing import Iterable
 
-import pandas as pd
 import numpy as np
-
-from tqdm import tqdm
+import pandas as pd
+from gym_PBN.envs.pbn_target import PBNTargetEnv
+import copy
+from tqdm.contrib.concurrent import process_map
 
 
 def _bit_seq_to_str(seq: Iterable[int]) -> str:
@@ -31,36 +33,20 @@ def compute_ssd_hist(
     assert SSD_N // SSD_RESETS, "Resets does not divide the iterations."
 
     g = len(env.target_nodes)
-    ssd = np.zeros((2**g, SSD_RESETS), dtype=np.float32)
 
-    total_iters = 0
-    for i in tqdm(range(SSD_RESETS), desc=f"SSD run for {env.name}"):
-        sub_ssd = np.zeros(2**g, dtype=np.float32)
-        env.reset()
+    _func = partial(_ssd_run, g, SSD_N // SSD_RESETS, BIT_FLIP_PROB, model)
+    _iter = [copy.deepcopy(env) for _ in range(SSD_RESETS)]
 
-        for _ in range(SSD_N // SSD_RESETS):
-            total_iters += 1
+    all_ssds = process_map(
+        _func,
+        _iter,
+        max_workers=multiprocessing.cpu_count(),
+        desc=f"SSD run for {env.name}",
+    )
 
-            state = env.render()
-            # Convert relevant part of state to binary string, then parse it as an int to get the bucket index.
-            bucket = env.render(mode="target_idx")
-            sub_ssd[bucket] += 1
+    ssd = np.array(all_ssds)
 
-            if not model:  # Control the environment
-                flip = np.random.rand(len(state)) < BIT_FLIP_PROB
-                for j in range(len(state)):
-                    if flip[j]:
-                        env.graph.flipNode(j)
-                env.step(action=0)
-            else:
-                action = model.predict(state, deterministic=True)
-                if type(action) == tuple:
-                    action = action[0]
-                env.step(action=action)
-
-        ssd[:, i] = sub_ssd
-
-    ssd = np.mean(ssd, axis=1)
+    ssd = np.mean(ssd, axis=0)
     ssd /= SSD_N // SSD_RESETS  # Normalize
     ret = ssd
 
@@ -68,3 +54,28 @@ def compute_ssd_hist(
     ret = pd.DataFrame(list(ssd), index=states, columns=["Value"])
 
     return ret
+
+
+def _ssd_run(g, iters, bit_flip_prob, model, env):
+    sub_ssd = np.zeros(2**g, dtype=np.float32)
+    env.reset()
+
+    for _ in range(iters):
+        state = env.render()
+        # Convert relevant part of state to binary string, then parse it as an int to get the bucket index.
+        bucket = env.render(mode="target_idx")
+        sub_ssd[bucket] += 1
+
+        if not model:  # Control the environment
+            flip = np.random.rand(len(state)) < bit_flip_prob
+            for j in range(len(state)):
+                if flip[j]:
+                    env.graph.flipNode(j)
+            env.step(action=0)
+        else:
+            action = model.predict(state, deterministic=True)
+            if type(action) == tuple:
+                action = action[0]
+            env.step(action=action)
+
+    return sub_ssd

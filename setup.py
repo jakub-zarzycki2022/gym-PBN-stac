@@ -31,6 +31,7 @@ setup(
         "pandas",
         "scipy",
         "sklearn",
+        "numba",
         "tqdm",
         "psutil",
     ],

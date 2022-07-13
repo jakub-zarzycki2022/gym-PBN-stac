@@ -18,6 +18,20 @@ register(
     max_episode_steps=100,
 )
 
+register(
+    id="gym-PBN/Bittner-100-v0",
+    entry_point="gym_PBN.envs:Bittner100",
+    nondeterministic=True,
+    max_episode_steps=100,
+)
+
+register(
+    id="gym-PBN/Bittner-200-v0",
+    entry_point="gym_PBN.envs:Bittner200",
+    nondeterministic=True,
+    max_episode_steps=100,
+)
+
 register(id="gym-PBN/PBN-sampled-data-v0", entry_point="gym_PBN.envs:PBNSampledDataEnv")
 
 register(

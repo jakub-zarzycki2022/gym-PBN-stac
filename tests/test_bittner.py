@@ -1,9 +1,8 @@
 from pathlib import Path
 
 import numpy as np
-
-from gym_PBN.envs.bittner.utils import extract_gene_data, pad_ids, spawn
 from gym_PBN.envs.bittner.gen.binarise import binarise
+from gym_PBN.envs.bittner.utils import extract_gene_data, pad_ids, spawn
 
 ROOT_PATH = Path(__file__).parent.parent
 DATA_PATH = ROOT_PATH / "gym_PBN" / "envs" / "bittner" / "data"

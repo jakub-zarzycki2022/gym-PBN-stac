@@ -1,6 +1,6 @@
 import random
-from typing import List, Set, Tuple, Union
 from pathlib import Path
+from typing import List, Set, Tuple, Union
 
 import gym
 import networkx as nx
@@ -288,19 +288,25 @@ class Bittner70(PBNTargetEnv):
 
     includeIDs = [234237, 324901, 759948, 25485, 266361, 108208, 130057]
 
+    N = 70
+    NAME = "Bittner-70"
+
     def __init__(
         self,
-        name: str = "Bittner-70",
+        name: str = None,
         horizon: int = 11,
         reward_config: dict = None,
         end_episode_on_success: bool = False,
     ):
+        if not name:
+            name = self.NAME
+
         graph = utils.spawn(
             file=self.genedata,
-            total_genes=70,
+            total_genes=self.N,
             include_ids=self.includeIDs,
             bin_method="k-means",
-            n_predictors=15,
+            n_predictors=5,
             predictor_sets_path=self.predictor_sets_path,
         )
 
@@ -314,3 +320,13 @@ class Bittner70(PBNTargetEnv):
         super().__init__(
             graph, goal_config, name, reward_config, end_episode_on_success
         )
+
+
+class Bittner100(Bittner70):
+    N = 100
+    NAME = "Bittner-100"
+
+
+class Bittner200(Bittner70):
+    N = 200
+    NAME = "Bittner-200"

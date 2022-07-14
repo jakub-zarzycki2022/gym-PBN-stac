@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 import plotly.express as px
 from gym_PBN.envs.pbn_target import PBNTargetEnv
+from tqdm import tqdm
 from tqdm.contrib.concurrent import process_map
 
 
@@ -21,6 +22,7 @@ def compute_ssd_hist(
     iters: int = 1_200_000,
     resets: int = 300,
     bit_flip_prob: float = 0.01,
+    multiprocess: bool = True,
 ) -> pd.DataFrame:
     SSD_N = iters  # Number of experiences to sample for the SSD calculation
     SSD_RESETS = resets
@@ -35,15 +37,24 @@ def compute_ssd_hist(
 
     g = len(env.target_nodes)
 
-    _func = partial(_ssd_run, g, SSD_N // SSD_RESETS, BIT_FLIP_PROB, model)
-    _iter = [copy.deepcopy(env) for _ in range(SSD_RESETS)]
+    if multiprocess:
+        _func = partial(_ssd_run, g, SSD_N // SSD_RESETS, BIT_FLIP_PROB, model)
+        _iter = [copy.deepcopy(env) for _ in range(SSD_RESETS)]
 
-    all_ssds = process_map(
-        _func,
-        _iter,
-        max_workers=multiprocessing.cpu_count(),
-        desc=f"SSD run for {env.name}",
-    )
+        max_workers = multiprocessing.cpu_count()
+        print(f"Will compute the SSD with {max_workers} processes.")
+
+        all_ssds = process_map(
+            _func,
+            _iter,
+            max_workers=max_workers,
+            desc=f"SSD run for {env.name}",
+        )
+
+    else:
+        all_ssds = []
+        for _ in tqdm(range(SSD_RESETS), desc=f"SSD run for {env.name}"):
+            all_ssds.append(_ssd_run(g, SSD_N // SSD_RESETS, BIT_FLIP_PROB, model, env))
 
     ssd = np.array(all_ssds)
 

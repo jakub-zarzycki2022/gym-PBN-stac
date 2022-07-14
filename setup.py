@@ -23,7 +23,7 @@ setup(
         "Topic :: Scientific/Engineering :: Artificial Intelligence",
     ],
     packages=find_packages(),
-    package_data={"gym_PBN.envs.bittner": ["data/*.xls", "data/*.p"]},
+    package_data={"gym_PBN.envs.bittner": ["data/*.xls", "data/*.pkl"]},
     install_requires=[
         "gym",
         "networkx",

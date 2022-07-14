@@ -137,8 +137,8 @@ class PBNTargetEnv(gym.Env):
         observation = self.graph.getState()
         reward, done = self._get_reward(observation, action)
         info = {
-            "observation_idx": self._state_to_idx(self.graph.getState()),
-            "observation_dict": self.graph.getState(),
+            "observation_idx": self._state_to_idx(observation),
+            "observation_dict": observation,
         }
 
         return self.get_state(), reward, done, info
@@ -146,7 +146,7 @@ class PBNTargetEnv(gym.Env):
     def _to_map(self, state):
         getIDs = getattr(self.graph, "getIDs", None)
         if getIDs is not None and type(state) is not dict:
-            ids = [_id[0] for _id in getIDs()]
+            ids = getIDs()
             state = dict(zip(ids, state))
         return state
 

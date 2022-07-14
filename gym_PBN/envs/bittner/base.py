@@ -7,6 +7,7 @@ import pickle
 import random
 import time
 from os import path
+from tkinter import E
 
 import networkx as nx
 import numpy as np
@@ -269,9 +270,10 @@ class Graph:
     def flipNode(self, index):
         if index < len(self.nodes):
             self.nodes[index].setValue(self.nodes[index].value ^ True)
+        else:
+            raise ValueError(f"Invalid action, no node at index {index}")
 
     def step(self):
-        #                self.perturbations = True
         if self.perturbations:
             pertFlag = np.random.rand(len(self.nodes)) < self.p
             if pertFlag.any():
@@ -283,21 +285,17 @@ class Graph:
                 self.setState(list(oldState.values()))
             else:
                 oldState = self.getState()
-                outputState = {}
                 for i in range(0, len(self.nodes)):
                     self.nodes[i].step(oldState)
-                outputState = self.getState()
         else:
             oldState = self.getState()
-            outputState = {}
             for i in range(0, len(self.nodes)):
                 self.nodes[i].step(oldState)
-            outputState = self.getState()
 
     def getState(self):
         outputState = {}
         for node in self.nodes:
-            outputState[int(node.ID)] = node.value
+            outputState[node.ID] = node.value
         return outputState
 
     def getNames(self):
@@ -307,7 +305,7 @@ class Graph:
         return names
 
     def getIDs(self):
-        IDs = [node.ID[0] for node in self.nodes]
+        IDs = [node.ID for node in self.nodes]
         return IDs
 
     def getNodeByID(self, ID):

@@ -7,7 +7,6 @@ import pickle
 import random
 import time
 from os import path
-from tkinter import E
 
 import networkx as nx
 import numpy as np

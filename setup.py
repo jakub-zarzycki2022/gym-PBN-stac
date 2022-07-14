@@ -29,6 +29,7 @@ setup(
         "networkx",
         "numpy",
         "pandas",
+        "xlrd",
         "scipy",
         "sklearn",
         "numba",

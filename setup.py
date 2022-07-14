@@ -7,12 +7,12 @@ README = (CURRENT_PATH / "README.md").read_text()
 
 setup(
     name="gym-PBN",
-    version="1.0.2",
+    version="1.0.3",
     description="An OpenAI Gym modelling Probabilistic Boolean Networks and Probabilistic Boolean Control Networks.",
     long_description=README,
     long_description_content_type="text/markdown",
     url="https://github.com/evangelos-ch/gym-PBN/",
-    author="Evangelos (Angel) Chatzaroulas",
+    author="Evangelos Chatzaroulas",
     author_email="e.chatzaroulas@surrey.ac.uk",
     license="MIT",
     classifiers=[
@@ -37,6 +37,7 @@ setup(
     ],
     extras_require={
         "dev": ["pytest", "black", "rope"],
+        "vis": ["plotly_express==0.4.1", "kaleido"],
     },
     python_requires=">3.6",
 )

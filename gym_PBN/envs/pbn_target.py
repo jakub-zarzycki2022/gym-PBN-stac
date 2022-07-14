@@ -305,7 +305,7 @@ class Bittner70(PBNTargetEnv):
             file=self.genedata,
             total_genes=self.N,
             include_ids=self.includeIDs,
-            bin_method="k-means",
+            bin_method="kmeans",
             n_predictors=5,
             predictor_sets_path=self.predictor_sets_path,
         )

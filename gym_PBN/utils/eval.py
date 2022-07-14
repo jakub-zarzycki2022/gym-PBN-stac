@@ -1,3 +1,4 @@
+import copy
 import itertools
 import multiprocessing
 from functools import partial
@@ -5,8 +6,8 @@ from typing import Iterable
 
 import numpy as np
 import pandas as pd
+import plotly.express as px
 from gym_PBN.envs.pbn_target import PBNTargetEnv
-import copy
 from tqdm.contrib.concurrent import process_map
 
 
@@ -52,8 +53,9 @@ def compute_ssd_hist(
 
     states = list(map(_bit_seq_to_str, itertools.product([0, 1], repeat=g)))
     ret = pd.DataFrame(list(ssd), index=states, columns=["Value"])
+    plot = visualize_ssd(ret, env.name)
 
-    return ret
+    return ret, plot
 
 
 def _ssd_run(g, iters, bit_flip_prob, model, env):
@@ -79,3 +81,57 @@ def _ssd_run(g, iters, bit_flip_prob, model, env):
             env.step(action=action)
 
     return sub_ssd
+
+
+def eval_increase(
+    env: PBNTargetEnv,
+    model: object,
+    original_ssd: pd.DataFrame = None,
+    iters: int = 1_200_000,
+    resets: int = 300,
+    bit_flip_prob: float = 0.01,
+) -> float:
+    """Compute the total increase in the favourable states in the SSD histogram.
+
+    Args:
+        env (PBNTargetEnv): the gym-PBN environment.
+        model (object): a Stable Baselines model or an Agent of a similar interface.
+        original_ssd (pd.DataFrame, optional): the cached uncontrolled SSD Histogram. Defaults to None,
+            and if not provided, it will be recalculated.
+        iters (int, optional): how many environment transitions to compute. Defaults to 1.2 Million.
+        resets (int, optional): how many times to reset the environment. `iters` should be divisible by this number. Defaults to 300.
+        bit_flip_prob (float, optional): number in [0,1] on the probability of flipping each bit at random when no control is being applied. Defaults to 0.01
+
+    Returns:
+        float: the total increase across all favourable states.
+    """
+    if original_ssd == None:  # Cache
+        original_ssd = compute_ssd_hist(
+            env, iters=iters, resets=resets, bit_flip_prob=bit_flip_prob
+        )
+    model_ssd = compute_ssd_hist(
+        env, model, iters=iters, resets=resets, bit_flip_prob=bit_flip_prob
+    )
+    states_of_interest = [_bit_seq_to_str(state) for state in env.target_node_values]
+    return (model_ssd - original_ssd)[states_of_interest].sum()
+
+
+def visualize_ssd(ssd_frame: pd.DataFrame, env_name: str) -> object:
+    """Visualize and save the Steady State Distribution histogram.
+
+    Args:
+        ssd_frame (pd.DataFrame): a DataFrame containing the states of interest and
+            their corresponding probability.
+        env_name (str): the name of the environment for metadata's sake.
+    """
+    fig = px.bar(
+        ssd_frame,
+        x=ssd_frame.index,
+        y="Value",
+        labels={
+            "states": "Gene Premutations",
+            "ssd_values": "Steady State Distribution",
+        },
+        title=f"SSD for {env_name}",
+    )
+    return fig

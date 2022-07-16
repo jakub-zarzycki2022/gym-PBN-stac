@@ -35,5 +35,5 @@ if __name__ == "__main__":
     env = PBNTargetEnv(graph, goal_config, "Bittner-200")
 
     # Step 2 - Evaluation
-    ssd = compute_ssd_hist(env, resets=300, iters=1_200_000)
+    ssd, _ = compute_ssd_hist(env, resets=300, iters=1_200_000)
     print(ssd)

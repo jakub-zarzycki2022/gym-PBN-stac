@@ -37,7 +37,7 @@ setup(
         "psutil",
     ],
     extras_require={
-        "dev": ["pytest", "black", "rope"],
+        "dev": ["pytest", "black", "rope", "wandb"],
         "vis": ["plotly_express==0.4.1", "kaleido"],
     },
     python_requires=">3.6",

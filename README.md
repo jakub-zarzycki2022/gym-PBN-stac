@@ -6,22 +6,26 @@ Probabilistic Boolean (Control) Networks are Boolean Networks where the logic fu
 
 The control of Probabilistic Boolean (Control) Networks is a well studied problem in control theory. Recently, however, there has been promise on the application of Reinforcement Learning for control of said networks to certain attractor states as well [Papagiannis, Georgios, et al., 2019](https://arxiv.org/abs/1909.03331).
 
-The point of this library is to provide accessible PB(C)N environments in the OpenAI Gym framework. The environments provided are fully [Stable Baselines3](https://github.com/DLR-RM/stable-baselines3)-compatible
+The point of this library is to provide accessible PB(C)N environments in the OpenAI Gym framework. The environments provided are fully [Stable Baselines3](https://github.com/DLR-RM/stable-baselines3)-compatible.
 
 ## Environments
 
--   `gym_PBN:PBN-v0`: The base Probabilistic Boolean Network environment. Actions involve taking no action, or "flipping" the value of a node at the provided index.
--   `gym_PBN:PBCN-v0`: The base Probabilistic Boolean Control Network environment. Actions involve setting the control nodes to a certain value.
+-   `gym-PBN/PBN-v0`: The base Probabilistic Boolean Network environment. Actions involve taking no action, or "flipping" the value of a node at the provided index.
+-   `gym-PBN/PBCN-v0`: The base Probabilistic Boolean Control Network environment. Actions involve setting the control nodes to a certain value.
+-   `gym-PBN/PBN-target-v0`: The base environment for so-called "target" control. This is the SSD-based control objective in our IEEE TCNS paper, where the goal is to increase the environment's state distribution to a more favourable one w.r.t. the expression of given nodes, and you can do so by perturbing a subset of the nodes (a single node in our case).
+-   `gym-PBN/Bittner-X-v0` with X being either `28`, `70`, `100` or `200`: Instantiations of the `PBN-target-v0` environment using gene data from Bittner et al. used to infer a PBN of size N=28,70,100,200 respectively.
+-   `gym-PBN/PBN-sampled-data-v0`: A so-called "sampled-data control" (temporally abstract actions in conventional RL terms) problem setting. The agent takes an action constituting a tuple: the actual action, and the duration for this action in integer time-steps.
+-   `gym-PBN/PBCN-sampled-data-v0`: The same as above but with a PBCN instead, and the actions are thus a tuple of values to set the control nodes to.
+-   `gym-PBN/PBN-self-triggering-v0`: Same as above except the duration is a termination probability value. Thus, the action duration is stochastic. Perhaps more in line with the conventional options framework in RL.
+-   `gym-PBN/PBCN-self-triggering-v0`: Same as above except the network is a PBCN.
 
 The environments provide the framework for such networks. They need to be instantiated with appropriate node data.
 
 ## Installation
 
-Requirements: [Python 3.6+](https://www.python.org/downloads/).
+Requirements: [Python 3.9+](https://www.python.org/downloads/).
 
 PIP: `python -m pip install gym-PBN`
-
-Anaconda: **TO BE UPDATED**
 
 ## Configuring your own PB(C)N
 

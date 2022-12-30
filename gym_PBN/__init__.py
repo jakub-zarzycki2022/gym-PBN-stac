@@ -1,4 +1,4 @@
-from gym.envs.registration import register
+from gymnasium import register
 
 register(id="gym-PBN/PBN-v0", entry_point="gym_PBN.envs:PBNEnv")
 

@@ -1,19 +1,22 @@
 from typing import List, Set, Tuple, Union
+import random
 
-import gym
+import gymnasium as gym
 import networkx as nx
 import numpy as np
-from gym.spaces import Discrete, MultiBinary
-from gym_PBN.types import GYM_STEP_RETURN, REWARD, STATE, TERMINATED
+from gymnasium.spaces import Discrete, MultiBinary
+from gym_PBN.types import GYM_STEP_RETURN, REWARD, STATE, TERMINATED, TRUNCATED
 
 from .common.pbn import PBN
 
 
 class PBNEnv(gym.Env):
-    metadata = {"render.modes": ["human", "PBN", "STG", "funcs", "idx", "float"]}
+    metadata = {"render_modes": ["human", "PBN", "STG", "funcs", "idx", "float"]}
 
     def __init__(
         self,
+        render_mode: str = "human",
+        render_no_cache: bool = False,
         PBN_data=[],
         logic_func_data=None,
         name: str = None,
@@ -55,6 +58,12 @@ class PBNEnv(gym.Env):
         self.observation_space.dtype = bool
         self.action_space = Discrete(self.PBN.N + 1)
         self.name = name
+        self.render_mode = render_mode
+        self.render_no_cache = render_no_cache
+
+    def _seed(self, seed: int = None):
+        np.random.seed(seed)
+        random.seed(seed)
 
     def _check_config(
         self,
@@ -98,8 +107,8 @@ class PBNEnv(gym.Env):
             Exception: When the action is outside the action space.
 
         Returns:
-            GYM_STEP_RETURN: The typical Gym environment 4-item Tuple.\
-                 Consists of the resulting environment state, the associated reward, the termination status and additional info.
+            GYM_STEP_RETURN: The typical Gymnasium environment 5-item Tuple.\
+                 Consists of the resulting environment state, the associated reward, the termination / truncation status and additional info.
         """
         if not self.action_space.contains(action):
             raise Exception(f"Invalid action {action}, not in action space.")
@@ -110,12 +119,14 @@ class PBNEnv(gym.Env):
         self.PBN.step()
 
         observation = self.PBN.state
-        reward, done = self._get_reward(observation, action)
+        reward, terminated, truncated = self._get_reward(observation, action)
         info = {"observation_idx": self._state_to_idx(observation)}
 
-        return observation, reward, done, info
+        return observation, reward, terminated, truncated, info
 
-    def _get_reward(self, observation: STATE, action: int) -> Tuple[REWARD, TERMINATED]:
+    def _get_reward(
+        self, observation: STATE, action: int
+    ) -> Tuple[REWARD, TERMINATED, TRUNCATED]:
         """The Reward function.
 
         Args:
@@ -123,14 +134,14 @@ class PBNEnv(gym.Env):
             action (int): The action taken.
 
         Returns:
-            Tuple[REWARD, TERMINATED]: Tuple of the reward and the environment done status.
+            Tuple[REWARD, TERMINATED, TRUNCATED]: Tuple of the reward and the environment done status.
         """
-        reward, done = 0, False
+        reward, terminated, truncated = 0, False, False
         observation_tuple = tuple(observation)
 
         if observation_tuple in self.target:
             reward += self.successful_reward
-            done = True
+            terminated = True
         else:
             attractors_matched = sum(
                 observation_tuple in attractor for attractor in self.all_attractors
@@ -140,16 +151,24 @@ class PBNEnv(gym.Env):
         if action != 0:
             reward -= self.action_cost
 
-        return reward, done
+        return reward, terminated, truncated
 
-    def reset(self):
+    def reset(self, seed: int = None, options: dict = None) -> tuple[STATE, dict]:
         """Reset the environment. Initialise it to a random state."""
-        return self.PBN.reset()
+        if seed is not None:
+            self._seed(seed)
 
-    def set_state(self, state: Union[List[Union[int, bool]], np.ndarray, None]):
-        return self.PBN.reset(state)
+        state = None
+        if options is not None and "state" in options:
+            state = self.PBN.reset(options["state"])
+        observation = self.PBN.reset(state)
+        info = {"observation_idx": self._state_to_idx(observation)}
+        return observation, info
 
-    def render(self, mode="human", no_cache: bool = False):
+    def render(self):
+        mode = self.render_mode
+        no_cache = self.render_no_cache
+
         if mode == "human":
             return self.PBN.state
         elif mode == "PBN":
@@ -162,8 +181,6 @@ class PBNEnv(gym.Env):
             return self._state_to_idx(self.PBN.state)
         elif mode == "float":
             return [float(x) for x in self.PBN.state]
-        else:
-            raise Exception(f'Unrecognised mode "{mode}"')
 
     def _state_to_idx(self, state: STATE):
         return int(

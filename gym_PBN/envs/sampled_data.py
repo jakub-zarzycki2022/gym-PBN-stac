@@ -1,11 +1,10 @@
 from typing import Tuple, Union
 
-from gym import spaces
+from gymnasium import spaces
 from gym_PBN.envs.pbcn_env import PBCNEnv
 from gym_PBN.envs.pbn_env import PBNEnv
 from gym_PBN.types import GYM_STEP_RETURN
 from gym_PBN.utils import booleanize
-from gym_PBN.utils.gym import DiscreteRange
 
 # Types
 PBCN_MACRO_ACTION = Tuple[Tuple[Union[int, bool]], int]
@@ -14,6 +13,8 @@ PBCN_MACRO_ACTION = Tuple[Tuple[Union[int, bool]], int]
 class PBNSampledDataEnv(PBNEnv):
     def __init__(
         self,
+        render_mode: str = "human",
+        render_no_cache: bool = False,
         PBN_data=[],
         logic_func_data=None,
         name: str = None,
@@ -23,6 +24,8 @@ class PBNSampledDataEnv(PBNEnv):
         T: int = None,
     ):
         super().__init__(
+            render_mode=render_mode,
+            render_no_cache=render_no_cache,
             PBN_data=PBN_data,
             logic_func_data=logic_func_data,
             name=name,
@@ -34,11 +37,9 @@ class PBNSampledDataEnv(PBNEnv):
         self.gamma = gamma
 
         # Gym
-        self.T = T if T is not None else 2 ** self.PBN.N
+        self.T = T if T is not None else 2**self.PBN.N
         self.primitive_action_space = spaces.Discrete(self.PBN.N + 1)
-        self.interval_space = DiscreteRange(
-            1, self.T
-        )  # TODO remove when Gym 0.22.0 comes out
+        self.interval_space = spaces.Discrete(self.T, start=1)
         self.action_space = spaces.Tuple(
             (self.primitive_action_space, self.interval_space)
         )
@@ -62,15 +63,21 @@ class PBNSampledDataEnv(PBNEnv):
             self.PBN.step()
 
             # Calculate reward
-            # TODO Augment reward function
+            # HACK This does not have any of the more nuanced reward function stuff
+            # that "Sampled Data" PBCNs (a few lines below) have. This is because
+            # this class ended up not being used in actual experiments for the paper at all,
+            # and I didn't want to spend time on it.
             observation = self.PBN.state
-            reward, done = self._get_reward(observation, control_action)
-            total_reward += (self.gamma ** i) * reward
+            reward, terminated, truncated = self._get_reward(
+                observation, control_action
+            )
+            total_reward += reward
 
         return (
             observation,
             total_reward,
-            done,
+            terminated,
+            truncated,
             {
                 "control_action": control_action,
                 "interval": i,
@@ -82,6 +89,8 @@ class PBNSampledDataEnv(PBNEnv):
 class PBCNSampledDataEnv(PBCNEnv):
     def __init__(
         self,
+        render_mode: str = "human",
+        render_no_cache: bool = False,
         PBN_data=[],
         logic_func_data=None,
         name: str = None,
@@ -90,7 +99,15 @@ class PBCNSampledDataEnv(PBCNEnv):
         gamma: float = 0.99,
         T: int = None,
     ):
-        super().__init__(PBN_data, logic_func_data, name, goal_config, reward_config)
+        super().__init__(
+            render_mode,
+            render_no_cache,
+            PBN_data,
+            logic_func_data,
+            name,
+            goal_config,
+            reward_config,
+        )
 
         # Params
         self.gamma = gamma
@@ -99,24 +116,22 @@ class PBCNSampledDataEnv(PBCNEnv):
         self.observation_space = spaces.MultiBinary(self.PBN.N)
         self.observation_space.dtype = bool
 
-        self.T = T if T is not None else 2 ** self.PBN.N
+        self.T = T if T is not None else 2**self.PBN.N
         self.primitive_action_space = spaces.MultiBinary(self.PBN.M)
         self.primitive_action_space.dtype = bool
-        self.interval_space = DiscreteRange(
-            1, self.T
-        )  # TODO remove when Gym 0.22.0 comes out
+        self.interval_space = spaces.Discrete(self.T, start=1)
         self.action_space = spaces.Tuple(
             (self.primitive_action_space, self.interval_space)
         )
         self.discrete_action_space = spaces.Discrete(
-            (2 ** self.primitive_action_space.n) * self.interval_space.n
+            (2**self.primitive_action_space.n) * self.interval_space.n
         )
 
     def _idx_to_macro_action(self, i: int) -> PBCN_MACRO_ACTION:
         action = booleanize(
-            i % (2 ** self.primitive_action_space.n), self.primitive_action_space.n
+            i % (2**self.primitive_action_space.n), self.primitive_action_space.n
         ).tolist()
-        interval = i // (2 ** self.primitive_action_space.n) + 1
+        interval = i // (2**self.primitive_action_space.n) + 1
         return action, interval
 
     def step(self, action: Union[PBCN_MACRO_ACTION, int]) -> GYM_STEP_RETURN:
@@ -138,7 +153,7 @@ class PBCNSampledDataEnv(PBCNEnv):
 
         time_step_cost = 1
 
-        total_reward, done_step = 0, None
+        total_reward, terminated_step = 0, None
         for i in range(interval):
             # Take action
             self.PBN.apply_control(control_action)
@@ -148,21 +163,22 @@ class PBCNSampledDataEnv(PBCNEnv):
 
             # Calculate reward
             observation = self.PBN.state
-            reward, done = self._get_reward(observation)
+            reward, terminated, truncated = self._get_reward(observation)
             reward -= time_step_cost
 
             # Penalize overshooting the attractor
-            if done_step is not None:
+            if terminated_step is not None:
                 reward -= self.successful_reward
-            elif done:
-                done_step = i
+            elif terminated:
+                terminated_step = i
 
             total_reward += reward
 
         return (
             observation,
             total_reward,
-            done,
+            terminated,
+            truncated,
             {
                 "control_action": control_action,
                 "interval": i + 1,

@@ -1,4 +1,5 @@
-import gym
+import gym_PBN
+import gymnasium as gym
 
 
 def iterate_through_env(env, action, steps):
@@ -8,10 +9,10 @@ def iterate_through_env(env, action, steps):
     """
     obs = env.reset()
     for i in range(steps):
-        obs, reward, done, info = env.step(action)
-        print(obs, reward, done)
+        obs, reward, terminated, truncated, info = env.step(action)
+        print(obs, reward, terminated, truncated, info)
 
-        if done:
+        if terminated or truncated:
             break
 
 
@@ -21,7 +22,7 @@ def test_example_1():
     a paper.
     """
     env = gym.make(
-        "gym_PBN/PBCN-v0",
+        "gym-PBN/PBCN-v0",
         logic_func_data=(
             ["u", "x1", "x2", "x3", "x4"],
             [
@@ -48,3 +49,8 @@ def test_example_2():
     """
     env = gym.make("gym-PBN/Bittner-200-v0")
     iterate_through_env(env, 0, 11)
+
+
+if __name__ == "__main__":
+    test_example_1()
+    # test_example_2()

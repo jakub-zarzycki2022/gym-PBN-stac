@@ -1,8 +1,8 @@
 from typing import Tuple, Union
 
 import networkx as nx
-from gym.spaces import Discrete, MultiBinary
-from gym_PBN.types import GYM_STEP_RETURN, REWARD, STATE, TERMINATED
+from gymnasium.spaces import Discrete, MultiBinary
+from gym_PBN.types import GYM_STEP_RETURN, REWARD, STATE, TERMINATED, TRUNCATED
 from gym_PBN.utils import booleanize
 
 from .common.pbcn import PBCN
@@ -10,17 +10,27 @@ from .pbn_env import PBNEnv
 
 
 class PBCNEnv(PBNEnv):
-    metadata = {"render.modes": ["human", "PBN", "STG", "funcs", "idx", "float"]}
+    metadata = {"render_modes": ["human", "PBN", "STG", "funcs", "idx", "float"]}
 
     def __init__(
         self,
+        render_mode: str = "human",
+        render_no_cache: bool = False,
         PBN_data=[],
         logic_func_data=None,
         name: str = None,
         goal_config: dict = None,
         reward_config: dict = None,
     ):
-        super().__init__(PBN_data, logic_func_data, name, goal_config, reward_config)
+        super().__init__(
+            render_mode,
+            render_no_cache,
+            PBN_data,
+            logic_func_data,
+            name,
+            goal_config,
+            reward_config,
+        )
 
         # Switch to PBCN
         self.PBN = PBCN(PBN_data, logic_func_data)
@@ -32,20 +42,20 @@ class PBCNEnv(PBNEnv):
         self.action_space.dtype = bool
         self.discrete_action_space = Discrete(2**self.action_space.n)
 
-    def _get_reward(self, observation: STATE) -> Tuple[REWARD, TERMINATED]:
-        reward, done = 0, False
+    def _get_reward(self, observation: STATE) -> Tuple[REWARD, TERMINATED, TRUNCATED]:
+        reward, terminated, truncated = 0, False, False
         observation_tuple = tuple(observation)
 
         if observation_tuple in self.target:
             reward += self.successful_reward
-            done = True
+            terminated = True
         else:
             attractors_matched = sum(
                 observation_tuple in attractor for attractor in self.all_attractors
             )
             reward -= self.wrong_attractor_cost * attractors_matched
 
-        return reward, done
+        return reward, terminated, truncated
 
     def step(self, action: Union[Tuple[int], int]) -> GYM_STEP_RETURN:
         if type(action) is int:
@@ -59,10 +69,10 @@ class PBCNEnv(PBNEnv):
         self.PBN.step()
 
         observation = self.PBN.state
-        reward, done = self._get_reward(observation)
+        reward, terminated, truncated = self._get_reward(observation)
         info = {"observation_idx": self._state_to_idx(observation)}
 
-        return observation, reward, done, info
+        return observation, reward, terminated, truncated, info
 
     def compute_attractors(self):
         attractor_sets = []

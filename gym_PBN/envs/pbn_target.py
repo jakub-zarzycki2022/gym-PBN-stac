@@ -2,24 +2,26 @@ import random
 from pathlib import Path
 from typing import List, Set, Tuple, Union
 
-import gym
+import gymnasium as gym
 import networkx as nx
 import numpy as np
-from gym.spaces import Discrete, MultiBinary
-from gym_PBN.types import GYM_STEP_RETURN, REWARD, STATE, TERMINATED
+from gymnasium.spaces import Discrete, MultiBinary
+from gym_PBN.types import GYM_STEP_RETURN, REWARD, STATE, TERMINATED, TRUNCATED
 
 from .bittner import base, utils
 
 
 class PBNTargetEnv(gym.Env):
     metadata = {
-        "render.modes": ["human", "dict", "PBN", "STG", "idx", "float", "target"]
+        "render_modes": ["human", "dict", "PBN", "STG", "idx", "float", "target"]
     }
 
     def __init__(
         self,
         graph: base.Graph,
         goal_config: dict,
+        render_mode: str = None,
+        render_no_cache: bool = False,
         name: str = None,
         reward_config: dict = None,
         end_episode_on_success: bool = False,
@@ -74,9 +76,15 @@ class PBNTargetEnv(gym.Env):
         # intervention nodes + no action
         self.action_space = Discrete(len(self.intervene_on) + 1)
         self.name = name
+        self.render_mode = render_mode
+        self.render_no_cache = render_no_cache
 
         # State
         self.n_steps = 0
+
+    def _seed(self, seed: int = None):
+        np.random.seed(seed)
+        random.seed(seed)
 
     def _check_config(
         self,
@@ -120,8 +128,8 @@ class PBNTargetEnv(gym.Env):
             Exception: When the action is outside the action space.
 
         Returns:
-            GYM_STEP_RETURN: The typical Gym environment 4-item Tuple.\
-                 Consists of the resulting environment state, the associated reward, the termination status and additional info.
+            GYM_STEP_RETURN: The typical Gymnasium environment 5-item Tuple.\
+                 Consists of the resulting environment state, the associated reward, the termination and truncation status and additional info.
         """
         if not self.action_space.contains(action):
             raise Exception(f"Invalid action {action}, not in action space.")
@@ -135,13 +143,13 @@ class PBNTargetEnv(gym.Env):
         self.graph.step()
 
         observation = self.graph.getState()
-        reward, done = self._get_reward(observation, action)
+        reward, terminated, truncated = self._get_reward(observation, action)
         info = {
             "observation_idx": self._state_to_idx(observation),
             "observation_dict": observation,
         }
 
-        return self.get_state(), reward, done, info
+        return self.get_state(), reward, terminated, truncated, info
 
     def _to_map(self, state):
         getIDs = getattr(self.graph, "getIDs", None)
@@ -150,7 +158,9 @@ class PBNTargetEnv(gym.Env):
             state = dict(zip(ids, state))
         return state
 
-    def _get_reward(self, observation: STATE, action: int) -> Tuple[REWARD, TERMINATED]:
+    def _get_reward(
+        self, observation: STATE, action: int
+    ) -> Tuple[REWARD, TERMINATED, TRUNCATED]:
         """The Reward function.
 
         Args:
@@ -158,9 +168,9 @@ class PBNTargetEnv(gym.Env):
             action (int): The action taken.
 
         Returns:
-            Tuple[REWARD, TERMINATED, bool]: Tuple of the reward and the environment done status.
+            Tuple[REWARD, TERMINATED, TRUNCATED]: Tuple of the reward and the environment done status.
         """
-        reward, done = 0, False
+        reward, terminated = 0, False
         observation = self._to_map(observation)  # HACK Needed for some envs
         observation = tuple(
             [observation[x] for x in self.target_nodes]
@@ -168,7 +178,7 @@ class PBNTargetEnv(gym.Env):
 
         if observation in self.target_node_values:
             reward += self.successful_reward
-            done = done or self.end_episode_on_success
+            terminated = self.end_episode_on_success
         elif observation in self.undesired_node_values:
             reward -= self.wrong_attractor_cost
         else:
@@ -177,27 +187,33 @@ class PBNTargetEnv(gym.Env):
         if action != 0:
             reward -= self.action_cost
 
-        done = done or (self.end_episode_on_success and self.n_steps == self.horizon)
+        truncated = self.end_episode_on_success and self.n_steps == self.horizon
+        return reward, terminated, truncated
 
-        return reward, done
-
-    def reset(self, seed=None):
+    def reset(self, seed: int = None, options: dict = None):
         """Reset the environment. Initialise it to a random state, or to a certain state."""
         if seed:
-            np.random.seed(seed)
-            random.seed(seed)
+            self._seed(seed)
+
+        if options is not None and "state" in options:
+            self.graph.setState(options["state"])
+        else:
+            self.graph.genRandState()
 
         self.n_steps = 0
-        self.graph.genRandState()
-        return self.get_state()
-
-    def set_state(self, state: Union[List[Union[int, bool]], np.ndarray, None]):
-        return self.graph.setState(state)
+        observation = self.graph.getState()
+        info = {
+            "observation_idx": self._state_to_idx(observation),
+            "observation_dict": observation,
+        }
+        return self.get_state(), info
 
     def get_state(self):
-        return list(self.graph.getState().values())
+        return np.array(list(self.graph.getState().values()))
 
-    def render(self, mode="human", no_cache: bool = False):
+    def render(self):
+        mode = self.render_mode
+
         if mode == "human":
             return self.get_state()
         if mode == "dict":
@@ -216,8 +232,6 @@ class PBNTargetEnv(gym.Env):
         elif mode == "target_idx":
             target_state = self.render(mode="target")
             return self._state_to_idx(target_state)
-        else:
-            raise Exception(f'Unrecognised mode "{mode}"')
 
     def _state_to_idx(self, state: STATE):
         if type(state) is dict:
@@ -256,6 +270,8 @@ class Bittner28(PBNTargetEnv):
 
     def __init__(
         self,
+        render_mode: str = "human",
+        render_no_cache: bool = False,
         name: str = "Bittner-28",
         horizon: int = 11,
         reward_config: dict = None,
@@ -278,7 +294,13 @@ class Bittner28(PBNTargetEnv):
             "horizon": horizon,
         }
         super().__init__(
-            graph, goal_config, name, reward_config, end_episode_on_success
+            graph,
+            goal_config,
+            render_mode,
+            render_no_cache,
+            name,
+            reward_config,
+            end_episode_on_success,
         )
 
 
@@ -293,6 +315,8 @@ class Bittner70(PBNTargetEnv):
 
     def __init__(
         self,
+        render_mode: str = "human",
+        render_no_cache: bool = False,
         name: str = None,
         horizon: int = 11,
         reward_config: dict = None,
@@ -318,7 +342,13 @@ class Bittner70(PBNTargetEnv):
             "horizon": horizon,
         }
         super().__init__(
-            graph, goal_config, name, reward_config, end_episode_on_success
+            graph,
+            goal_config,
+            render_mode,
+            render_no_cache,
+            name,
+            reward_config,
+            end_episode_on_success,
         )
 
 

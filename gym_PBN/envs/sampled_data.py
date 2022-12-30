@@ -1,6 +1,8 @@
 from typing import Tuple, Union
 
+import numpy as np
 from gymnasium import spaces
+
 from gym_PBN.envs.pbcn_env import PBCNEnv
 from gym_PBN.envs.pbn_env import PBNEnv
 from gym_PBN.types import GYM_STEP_RETURN
@@ -140,7 +142,7 @@ class PBCNSampledDataEnv(PBCNEnv):
                 "You need to provide a macro action with either `macro_action` or `macro_action_discrete`."
             )
 
-        if type(action) is int:
+        if np.isreal(action):
             if not self.discrete_action_space.contains(action):
                 raise Exception(f"Invalid action {action}, not in action space.")
 

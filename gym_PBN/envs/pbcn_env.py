@@ -1,7 +1,9 @@
 from typing import Tuple, Union
 
 import networkx as nx
+import numpy as np
 from gymnasium.spaces import Discrete, MultiBinary
+
 from gym_PBN.types import GYM_STEP_RETURN, REWARD, STATE, TERMINATED, TRUNCATED
 from gym_PBN.utils import booleanize
 
@@ -58,7 +60,7 @@ class PBCNEnv(PBNEnv):
         return reward, terminated, truncated
 
     def step(self, action: Union[Tuple[int], int]) -> GYM_STEP_RETURN:
-        if type(action) is int:
+        if np.isreal(action):
             action = booleanize(action, self.action_space.n)
 
         if not self.action_space.contains(action):

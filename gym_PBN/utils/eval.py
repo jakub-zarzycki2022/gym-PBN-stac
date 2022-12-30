@@ -162,7 +162,7 @@ def eval_winrate(
         if state in env.target:
             continue
         iters += 1
-        observation, _ = env.reset(state)
+        observation, _ = env.reset(options={"state": state})
         j = 0
         total_steps = 0
         while True:
@@ -173,10 +173,10 @@ def eval_winrate(
 
             if terminated:
                 wins += 1
-                n_interactions.append(j)
-                n_timesteps.append(total_steps)
 
             if terminated or truncated:
+                n_interactions.append(j)
+                n_timesteps.append(total_steps)
                 break
 
         if i > max_states:

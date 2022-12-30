@@ -7,6 +7,7 @@ from typing import Iterable
 import numpy as np
 import pandas as pd
 import plotly.express as px
+from gym_PBN.envs.pbn_env import PBNEnv
 from gym_PBN.envs.pbn_target import PBNTargetEnv
 from tqdm import tqdm
 from tqdm.contrib.concurrent import process_map
@@ -146,3 +147,43 @@ def visualize_ssd(ssd_frame: pd.DataFrame, env_name: str) -> object:
         title=f"SSD for {env_name}",
     )
     return fig
+
+
+def eval_winrate(
+    env: PBNEnv, model: object, max_states: int = 200_000
+) -> tuple[float, float, float]:
+    states = itertools.product([0, 1], repeat=env.observation_space.n)
+
+    iters = 0
+    wins = 0
+    n_interactions = []
+    n_timesteps = []
+    for i, state in enumerate(states):
+        if state in env.target:
+            continue
+        iters += 1
+        observation, _ = env.reset(state)
+        j = 0
+        total_steps = 0
+        while True:
+            action = model.predict(observation, deterministic=True)
+            observation, _, terminated, truncated, info = env.step(action)
+            total_steps += info["interval"]
+            j += 1
+
+            if terminated:
+                wins += 1
+                n_interactions.append(j)
+                n_timesteps.append(total_steps)
+
+            if terminated or truncated:
+                break
+
+        if i > max_states:
+            break
+
+    winrate = wins / iters
+    avg_interactions = np.mean(n_interactions)
+    avg_timesteps = np.mean(n_timesteps)
+
+    return winrate, avg_interactions, avg_timesteps

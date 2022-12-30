@@ -35,6 +35,10 @@ class PBNEnv(gym.Env):
             goal_config = {}
             goal_config["all_attractors"] = self.compute_attractors()
             goal_config["target"] = goal_config["all_attractors"][-1]
+        else:
+            assert (
+                type(goal_config["target"]) is set
+            ), "Did you put multiple attractors as the target by mistake?"
         self.target = goal_config["target"]
         self.all_attractors = goal_config["all_attractors"]
 

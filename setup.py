@@ -7,7 +7,7 @@ README = (CURRENT_PATH / "README.md").read_text()
 
 setup(
     name="gym-PBN",
-    version="1.1.0",
+    version="1.1.1",
     description="A Gymnasium environment modelling Probabilistic Boolean Networks and Probabilistic Boolean Control Networks.",
     long_description=README,
     long_description_content_type="text/markdown",

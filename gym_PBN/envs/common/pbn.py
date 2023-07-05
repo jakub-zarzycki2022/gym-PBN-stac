@@ -13,7 +13,7 @@ from .node import Node
 
 class PBN:
     def __init__(
-        self, PBN_data: PBN_DATA = [], logic_func_data: LOGIC_FUNC_DATA = None
+        self, PBN_data: PBN_DATA = [], logic_func_data: LOGIC_FUNC_DATA = None, goal_config=None
     ):
         """Construct a PBN from given PBN data.
 
@@ -27,6 +27,11 @@ class PBN:
             self._init_from_pbn_data(PBN_data)
         else:
             self._init_from_logic_funcs(logic_func_data)
+
+        print(f"got PBN.N = {self.N}")
+        print(self.print_PBN())
+        if goal_config is not None:
+            self.target_nodes = goal_config["target_nodes"]
 
     def _init_from_pbn_data(self, PBN_data: PBN_DATA):
         self.N = len(PBN_data)

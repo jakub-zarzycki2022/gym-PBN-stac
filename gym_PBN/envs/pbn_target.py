@@ -74,7 +74,8 @@ class PBNTargetEnv(gym.Env):
         # Gym
         self.observation_space = MultiBinary(self.graph.N)
         # intervention nodes + no action
-        self.action_space = Discrete(len(self.intervene_on) + 1)
+        print("\nhello\n")
+        self.action_space = Discrete(len(self.intervene_on))
         self.name = name
         self.render_mode = render_mode
         self.render_no_cache = render_no_cache
@@ -232,6 +233,12 @@ class PBNTargetEnv(gym.Env):
         elif mode == "target_idx":
             target_state = self.render(mode="target")
             return self._state_to_idx(target_state)
+
+    # AM: Added to hadle the problem of render() method not accepting the keyword argument 'mode'.
+    def getTargetIdx(self):
+        state = self.graph.getState()
+        target_state = [state[node] for node in self.target_nodes]
+        return self._state_to_idx(target_state)
 
     def _state_to_idx(self, state: STATE):
         if type(state) is dict:

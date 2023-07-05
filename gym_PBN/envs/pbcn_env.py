@@ -43,12 +43,17 @@ class PBCNEnv(PBNEnv):
         self.action_space = MultiBinary(self.PBN.M)
         self.action_space.dtype = bool
         self.discrete_action_space = Discrete(2**self.action_space.n)
+        self.target_nodes = goal_config["target_nodes"]
+
+    def getTargetIdx(self):
+        state = self.PBN.state
+        return int(tuple(state) in self.target_nodes)
 
     def _get_reward(self, observation: STATE) -> Tuple[REWARD, TERMINATED, TRUNCATED]:
         reward, terminated, truncated = 0, False, False
         observation_tuple = tuple(observation)
 
-        if observation_tuple in self.target:
+        if observation_tuple in self.target_nodes:
             reward += self.successful_reward
             terminated = True
         else:
@@ -59,14 +64,12 @@ class PBCNEnv(PBNEnv):
 
         return reward, terminated, truncated
 
-    def step(self, action: Union[Tuple[int], int]) -> GYM_STEP_RETURN:
-        if np.isreal(action):
-            action = booleanize(action, self.action_space.n)
+    def step(self, action: int = 0) -> GYM_STEP_RETURN:
+        # if not self.action_space.contains(action):
+        #     raise Exception(f"Invalid action {action}, not in action space.")
 
-        if not self.action_space.contains(action):
-            raise Exception(f"Invalid action {action}, not in action space.")
-
-        self.PBN.apply_control(action)
+        if action != 0:
+            self.PBN.flip(action)
 
         self.PBN.step()
 
@@ -76,13 +79,13 @@ class PBCNEnv(PBNEnv):
 
         return observation, reward, terminated, truncated, info
 
-    def compute_attractors(self):
-        attractor_sets = []
-        for action in self.PBN.control_actions:
-            print(f"Computing attractors for action {action}...")
-            self.PBN.apply_control(action)
-            STG = self.render(mode="STG", no_cache=True)
-            generator = nx.algorithms.components.attracting_components(STG)
-            attractors = self._nx_attractors_to_tuples(list(generator))
-            attractor_sets.append((action, attractors))
-        return attractor_sets
+    # def compute_attractors(self):
+    #     attractor_sets = []
+    #     for action in self.PBN.control_actions:
+    #         print(f"Computing attractors for action {action}...")
+    #         self.PBN.apply_control(action)
+    #         STG = self.render(mode="STG", no_cache=True)
+    #         generator = nx.algorithms.components.attracting_components(STG)
+    #         attractors = self._nx_attractors_to_tuples(list(generator))
+    #         attractor_sets.append((action, attractors))
+    #     return attractor_sets

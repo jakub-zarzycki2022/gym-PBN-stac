@@ -78,6 +78,10 @@ def _ssd_run(g, iters, bit_flip_prob, model, env):
         state = env.render()
         # Convert relevant part of state to binary string, then parse it as an int to get the bucket index.
         bucket = env.render(mode="target_idx")
+        # AM: env.render in the line above does not accept the 'mode' argument. Therefore, a new
+        #     getTargetIdx() method
+        #
+        #bucket = env.getTargetIdx()
         sub_ssd[bucket] += 1
 
         if not model:  # Control the environment
@@ -173,6 +177,7 @@ def eval_winrate(
 
             if terminated:
                 wins += 1
+                raise ValueError
 
             if terminated or truncated:
                 n_interactions.append(j)

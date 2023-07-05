@@ -2,6 +2,7 @@ import itertools
 from typing import List, Union
 
 import numpy as np
+from random import randint
 from gym_PBN.types import LOGIC_FUNC_DATA, PBN_DATA
 
 from .node import Node
@@ -10,18 +11,21 @@ from .pbn import PBN
 
 class PBCN(PBN):
     def __init__(
-        self, PBN_data: PBN_DATA = [], logic_func_data: LOGIC_FUNC_DATA = None
+        self, PBN_data: PBN_DATA = None, logic_func_data: LOGIC_FUNC_DATA = None
     ):
-        if len(PBN_data) == 0:
+        if PBN_data is None or len(PBN_data) == 0:
+            print("in")
             PBN_data = self._logic_funcs_to_pbn_data(logic_func_data)
+        else:
+            print(f"got PBN_data = {PBN_data}")
 
         # Filter nodes
         nodes, control_nodes = [], []
         for node in PBN_data:
             if node[3]:
                 control_nodes.append(node)
-            else:
-                nodes.append(node)
+
+            nodes.append(node)
 
         # Init the non-control part
         self._init_from_pbn_data(nodes)
@@ -45,11 +49,21 @@ class PBCN(PBN):
         self.control_state = control
 
     def step(self):
-        # Huge assumption: all control nodes are at the start of the input mask.
-        combined_state = np.concatenate((self.control_state, self.state))
-        self.state = np.array(
-            [node.compute_next_value(combined_state) for node in self.nodes], dtype=bool
-        )
+        # I will just do my thing.
+        # assume that uncommented code is incorrect
+        # # Huge assumption: all control nodes are at the start of the input mask.
+        # combined_state = np.concatenate((self.control_state, self.state))
+        # self.state = np.array(
+        #     [node.compute_next_value(combined_state) for node in self.nodes], dtype=bool
+        # )
+        node_to_update = randint(1, len(self.state)-1)
+        old_state = self.state
+        new_val = self.nodes[node_to_update].compute_next_value(self.state)
+        self.state[node_to_update] = new_val
+        new_state = old_state
+        new_state[node_to_update] = new_val
+        if old_state[node_to_update] != new_val:
+            print(f"are those the same {new_val}?\n{old_state}\n{new_state}")
 
     def reset(self, state: Union[List[Union[int, bool]], np.ndarray, None] = None):
         self.control_state = np.zeros((self.M), dtype=bool)
@@ -76,4 +90,4 @@ class PBCN(PBN):
 
     @property
     def control_actions(self):
-        return map(list, itertools.product([0, 1], repeat=self.M))
+        return map(list, itertools.product([0, 1], repeat=self.N))

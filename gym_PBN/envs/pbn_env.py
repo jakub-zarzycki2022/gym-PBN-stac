@@ -23,6 +23,7 @@ class PBNEnv(gym.Env):
         goal_config: dict = None,
         reward_config: dict = None,
     ):
+        print("normal pbn")
         self.PBN = PBN(PBN_data, logic_func_data)
 
         # Goal configuration
@@ -37,16 +38,17 @@ class PBNEnv(gym.Env):
             goal_config["target"] = goal_config["all_attractors"][-1]
         else:
             assert (
-                type(goal_config["target"]) is set
+                type(goal_config["target_nodes"]) is set
             ), "Did you put multiple attractors as the target by mistake?"
-        self.target = goal_config["target"]
-        self.all_attractors = goal_config["all_attractors"]
+        self.target_nodes = goal_config["target_nodes"]
+        # self.all_attractors = goal_config["all_attractors"]
+        self.all_attractors = self.compute_attractors()
 
         # Reward configuration
         reward_config = self._check_config(
             reward_config,
             "reward",
-            set(["successful_reward", "wrong_attractor_cost", "action_cost"]),
+            {"successful_reward", "wrong_attractor_cost", "action_cost"},
             default_values={
                 "successful_reward": 10,
                 "wrong_attractor_cost": 2,
@@ -60,7 +62,7 @@ class PBNEnv(gym.Env):
         # Gym
         self.observation_space = MultiBinary(self.PBN.N)
         self.observation_space.dtype = bool
-        self.action_space = Discrete(self.PBN.N + 1)
+        self.action_space = Discrete(self.PBN.N)
         self.name = name
         self.render_mode = render_mode
         self.render_no_cache = render_no_cache
@@ -143,7 +145,7 @@ class PBNEnv(gym.Env):
         reward, terminated, truncated = 0, False, False
         observation_tuple = tuple(observation)
 
-        if observation_tuple in self.target:
+        if observation_tuple in self.target_nodes:
             reward += self.successful_reward
             terminated = True
         else:
@@ -169,9 +171,10 @@ class PBNEnv(gym.Env):
         info = {"observation_idx": self._state_to_idx(observation)}
         return observation, info
 
-    def render(self):
-        mode = self.render_mode
-        no_cache = self.render_no_cache
+    def render(self, mode=None):
+        if mode is None:
+            mode = self.render_mode
+        no_cache = False
 
         if mode == "human":
             return self.PBN.state
@@ -195,7 +198,9 @@ class PBNEnv(gym.Env):
         print("Computing attractors...")
         STG = self.render(mode="STG")
         generator = nx.algorithms.components.attracting_components(STG)
-        return self._nx_attractors_to_tuples(list(generator))
+        attractors = self._nx_attractors_to_tuples(list(generator))
+        print(attractors)
+        return attractors
 
     def _nx_attractors_to_tuples(self, attractors):
         return [

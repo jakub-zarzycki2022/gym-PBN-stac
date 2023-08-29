@@ -69,6 +69,29 @@ class PBCN(PBN):
         self.control_state = np.zeros((self.M), dtype=bool)
         return super().reset(state=state)
 
+    def _async_compute_next_states(self, state):
+        # Huge assumption: all control nodes are at the start of the input mask.
+        combined_state = np.concatenate((self.control_state, state))
+
+        output = []
+
+        # for each node
+        # try to update
+        # if chage probability is 0 -> skip
+        # if it's non zero update
+        for i in range(self.N):
+            new_state = combined_state.copy()
+            prob_true = self.nodes[i].get_next_value_prob(state)
+            if prob_true > 0. and state[i] == 0:
+                new_state[i] = 1
+                output.append((str(state.astype(int)), str(new_state.astype(int)), prob_true))
+
+            if prob_true < 1. and state[i] == 1:
+                new_state[i] = 0
+                output.append((str(state.astype(int)), str(new_state.astype(int)), prob_true))
+
+        return output
+
     def _compute_next_states(self, state):
         # Huge assumption: all control nodes are at the start of the input mask.
         combined_state = np.concatenate((self.control_state, state))

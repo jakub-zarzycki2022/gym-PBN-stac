@@ -1,4 +1,5 @@
 import copy
+import random
 import time
 from typing import List, Union
 
@@ -73,6 +74,7 @@ class PBN:
                 if type(state) != np.ndarray
                 else state.astype(bool)
             )
+        self.state[0] = 0
         return self.state
 
     def flip(self, index: int):
@@ -85,9 +87,13 @@ class PBN:
 
     def step(self):
         """Perform a step of natural evolution."""
-        self.state = np.array(
-            [node.compute_next_value(self.state) for node in self.nodes], dtype=bool
-        )
+        i = random.randint(1, len(self.state) - 1)
+        node = self.nodes[i]
+        self.state[i] = node.compute_next_value(self.state)
+
+        # self.state = np.array(
+        #     [node.compute_next_value(self.state) for node in self.nodes], dtype=bool
+        # )
 
     def name_nodes(self, names: List[str]):
         for i in range(self.N):
@@ -169,17 +175,95 @@ class PBN:
         probabilities = np.zeros((2, self.N), dtype=float)
 
         output = []
-        for i in range(self.N):
-            prob_true = self.nodes[i].get_next_value_prob(state)
-            probs = np.array([1 - prob_true, prob_true])
-            probabilities[:, i] = probs
 
-        prob_to_states = self._probs_to_states(probabilities)
+        #it's ugly, but i will use it just for testing
+        async_mode = True
 
-        for prostate, proprob in prob_to_states:
-            output.append((str(state.astype(int)), str(prostate.astype(int)), proprob))
+        # for each node
+        # try to update
+        # if chage probability is 0 -> skip
+        # if it's non zero update
+        if async_mode:
+            #print("im in async mode")
+            for i in range(self.N):
+                new_state = state.copy()
+                prob_true = self.nodes[i].get_next_value_prob(state)
+                if prob_true > 0. and state[i] == 0:
+                    new_state[i] = 1
+                    output.append((str(state.astype(int)), str(new_state.astype(int)), prob_true))
 
-        return output
+                if prob_true < 1. and state[i] == 1:
+                    new_state[i] = 0
+                    output.append((str(state.astype(int)), str(new_state.astype(int)), prob_true))
+            #print(output)
+            return output
+        else:
+            #print("im in sync mode")
+            # for each node
+            for i in range(self.N):
+                # probability of activation of node
+                prob_true = self.nodes[i].get_next_value_prob(state)
+                probs = np.array([1 - prob_true, prob_true])
+                probabilities[:, i] = probs
+
+            # probabilities = [prob_neg, prob_true for each node]
+            prob_to_states = self._probs_to_states(probabilities)
+
+            for prostate, proprob in prob_to_states:
+                # (old state, new state, transisition proba)
+                output.append((str(state.astype(int)), str(prostate.astype(int)), proprob))
+            #print(output)
+            return output
+
+    # probs się źle generują
+    def _async_probs_to_states(self, probs):
+        """
+        args:
+            probs: array of pairs prob of state, state for each gene
+        """
+
+        _, n_genes = probs.shape
+
+        # n_genes x 1
+        # state of PBN
+        protostate = np.ones(n_genes, dtype=float) * 0.5
+        protostate[0] = 0
+        protoprob = 1
+
+        state = self.state
+
+        prostate = [(protostate, protoprob)]
+        #print(f"\n\ncalculating for {probs}")
+
+        #select gene to update
+        for gene_i in range(1, n_genes):
+            # probability of state, state
+            p = probs[:, gene_i]
+            #print(f"for {gene_i} i got {p}")
+
+            prostate_copy = []
+
+            for i, pro in enumerate(prostate):
+                #print(i, pro)
+                pro_1, prob_1 = copy.deepcopy(pro)
+                pro_2, prob_2 = copy.deepcopy(pro)
+
+                pro_1[gene_i] = 0  # Set value to 0
+                pro_2[gene_i] = 1  # Set value to 1
+                prob_1 *= p[0]  # Set probability to that value being 0
+                prob_2 *= p[1]  # ^^^
+
+                # Put them back in.
+                protostate_1 = (pro_1, prob_1)
+                protostate_2 = (pro_2, prob_2)
+                #print(f"appending {prob_1}:{protostate_1} and {prob_2}:{protostate_2}")
+                if prob_1 > 0:
+                    prostate_copy.append(protostate_1)
+                if prob_2 > 0:
+                    prostate_copy.append(protostate_2)
+            prostate = prostate_copy
+        return prostate
+
 
     def _probs_to_states(self, probs):
         """Compute the next possible states to go to, and their probabilities, given a set of probabilities of being true for each gene.
@@ -204,19 +288,16 @@ class PBN:
         protostate = np.ones(n_genes, dtype=float) * 0.5
         protoprob = 1
 
+        #print(f"\n\ncalculating for {probs}")
+
         prostate = [(protostate, protoprob)]
         for gene_i in range(n_genes):
             p = probs[:, gene_i]
             if p[0] == 1 or p[0] == 0:
                 # Deterministic. Mainly for optimisation.
                 for pro in prostate:
-                    (
-                        protostate,
-                        protoprob,
-                    ) = pro  # Go through each next-state already computed, unpack them
-                    protostate[gene_i] = p[
-                        1
-                    ]  # Set the value of the gene to the corresponding value.
+                    protostate, protoprob = pro  # Go through each next-state already computed, unpack them
+                    protostate[gene_i] = p[1]  # Set the value of the gene to the corresponding value.
             else:
                 prostate_copy = []
                 for pro in prostate:

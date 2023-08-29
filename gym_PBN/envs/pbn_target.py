@@ -1,6 +1,8 @@
 import random
+from collections import defaultdict
 from pathlib import Path
 from typing import List, Set, Tuple, Union
+import pickle as pkl
 
 import gymnasium as gym
 import networkx as nx
@@ -9,6 +11,16 @@ from gymnasium.spaces import Discrete, MultiBinary
 from gym_PBN.types import GYM_STEP_RETURN, REWARD, STATE, TERMINATED, TRUNCATED
 
 from .bittner import base, utils
+from .bittner.base import findAttractors
+
+from gym_PBN.utils.get_attractors_from_cabean import get_attractors
+
+
+def state_equals(state1, state2):
+    for i in range(len(state2)):
+        if state1[i] != state2[i]:
+            return False
+    return True
 
 
 class PBNTargetEnv(gym.Env):
@@ -75,13 +87,117 @@ class PBNTargetEnv(gym.Env):
         self.observation_space = MultiBinary(self.graph.N)
         # intervention nodes + no action
         print("\nhello\n")
-        self.action_space = Discrete(len(self.intervene_on))
+        self.action_space = Discrete(self.graph.N + 1)
         self.name = name
         self.render_mode = render_mode
         self.render_no_cache = render_no_cache
 
         # State
         self.n_steps = 0
+
+        self.visited_states = defaultdict(int)
+
+        self.all_attractors = []
+        self.non_attractors = set()
+        self.counter = 0
+
+        # i can compute stg only for pbn < 20
+        # stg = self.graph.genSTG()
+        # self.all_attractors = findAttractors(stg)
+
+    def attractor_checker(self, stg, state, depth):
+        if depth < 1:
+            return stg
+
+        stg.add_node(state)
+
+        next_states = self.graph.getNextStates(state)
+        stg.add_nodes_from(next_states.keys())
+        for ns in next_states:
+            stg.add_edge(state, ns)
+            stg = self.attractor_checker(stg, ns, depth - 1)
+        return stg
+
+    def also_dep_is_attracting_state(self, state):
+        raise ValueError("You are not supposed to be using me")
+        state = tuple(state)
+        next_states = self.graph.getNextStates(state)
+
+        if len(next_states) > 1:
+            return False
+
+        if state not in next_states:
+            return False
+
+        return True
+
+
+    def dep_is_attracting_state(self, state):
+        return True
+        #print(f"state {tuple(state)} return {self.visited_states[tuple(state)]}")
+        returns_limit = 3
+        attractor_search_depth = 3
+
+        state = tuple(state)
+        # if state == (1, 0, 1, 1, 1, 1, 1, 0, 1, 0):
+        #     print(state, self.counter)
+        #     self.counter += 1
+        self.visited_states[state] += 1
+
+        for attractor in self.all_attractors:
+            if state in attractor:
+                self.visited_states.clear()
+                #print(f"{state} is part of attractor {attractor}")
+                if state == (1, 0, 1, 1, 1, 1, 1, 0, 1, 0):
+                    raise ValueError("3")
+                return True
+
+        if state in self.non_attractors:
+            #print(f"state {state} is non-attracting")
+            if state == (1, 0, 1, 1, 1, 1, 1, 0, 1, 0):
+                print(self.non_attractors)
+                raise ValueError(2)
+            return False
+
+        if self.visited_states[state] > returns_limit:
+            self.visited_states.clear()
+            #print("visit")
+            stg = nx.DiGraph()
+
+            attractor = self.attractor_checker(stg, state, attractor_search_depth)
+            #print(len(attractor))
+
+            is_scc = nx.is_strongly_connected(attractor)
+
+            if not is_scc:
+                self.non_attractors.update(attractor.nodes)
+                #print("not an attractor - is not an scc")
+                return False
+
+            # we have to split it into sccs to check if we are not treating an attractor as a non-attractor
+            for scc in nx.strongly_connected_components(stg):
+                #print(f"scc is {scc}")
+                if (1, 0, 1, 1, 1, 1, 1, 0, 1, 0) in scc:
+                    break
+                non_attractor = False
+
+                for node in list(scc):
+                    for next_node in self.graph.getNextStates(node):
+                        if next_node not in scc:
+                            self.non_attractors = self.non_attractors.union(scc)
+                            non_attractor = True
+                            break
+
+                    if non_attractor:
+                        break
+
+                # this scc is probably an attractor
+                if not non_attractor:
+                    self.all_attractors.append(scc)
+
+            return self.is_attracting_state(state)
+
+        return False
 
     def _seed(self, seed: int = None):
         np.random.seed(seed)
@@ -119,11 +235,13 @@ class PBNTargetEnv(gym.Env):
 
         return config
 
-    def step(self, action: int = 0) -> GYM_STEP_RETURN:
+    def step(self, action: int = 0, force=False) -> GYM_STEP_RETURN:
         """Transition the environment by 1 step. Optionally perform an action.
+           Steps until it hits an attractor.
 
         Args:
             action (int, optional): The action to perform (1-indexed node to flip). Defaults to 0, meaning no action.
+            force (bool, optional): Force graph to only make single seps, and don't care about attractors.
 
         Raises:
             Exception: When the action is outside the action space.
@@ -132,16 +250,21 @@ class PBNTargetEnv(gym.Env):
             GYM_STEP_RETURN: The typical Gymnasium environment 5-item Tuple.\
                  Consists of the resulting environment state, the associated reward, the termination and truncation status and additional info.
         """
+        #print(f"for state {self.get_state()} got action {action}")
         if not self.action_space.contains(action):
             raise Exception(f"Invalid action {action}, not in action space.")
 
         self.n_steps += 1
+        #print(f"action = {action}")
 
+        #s = self.render()
+        #print(self.is_attracting_state(s), s, action)
         if action != 0:  # Action 0 is taking no action.
-            _id = self.graph.getIDs().index(self.intervene_on[action - 1])
-            self.graph.flipNode(_id)
+            self.graph.flipNode(action - 1)
 
         self.graph.step()
+        while not force and not self.is_attracting_state(self.graph.getState().values()):
+            self.graph.step()
 
         observation = self.graph.getState()
         reward, terminated, truncated = self._get_reward(observation, action)
@@ -159,9 +282,17 @@ class PBNTargetEnv(gym.Env):
             state = dict(zip(ids, state))
         return state
 
-    def _get_reward(
-        self, observation: STATE, action: int
-    ) -> Tuple[REWARD, TERMINATED, TRUNCATED]:
+    def in_target(self, observation):
+        for a_state in self.all_attractors[self.target_attractor]:
+            for i in range(len(observation)):
+                if a_state[i] == '*':
+                    continue
+                if a_state[i] != observation[i]:
+                    break
+            else:
+                return True
+
+    def _get_reward(self, observation: STATE, action: int) -> Tuple[REWARD, TERMINATED, TRUNCATED]:
         """The Reward function.
 
         Args:
@@ -174,21 +305,19 @@ class PBNTargetEnv(gym.Env):
         reward, terminated = 0, False
         observation = self._to_map(observation)  # HACK Needed for some envs
         observation = tuple(
-            [observation[x] for x in self.target_nodes]
+            [observation[x] for x in sorted(observation)]
         )  # Filter it down
 
-        if observation in self.target_node_values:
-            reward += self.successful_reward
-            terminated = self.end_episode_on_success
-        elif observation in self.undesired_node_values:
-            reward -= self.wrong_attractor_cost
+        if self.in_target(observation):
+            reward += 20
+            terminated = True
         else:
-            reward -= self.successful_reward
+            reward -= 5
 
         if action != 0:
-            reward -= self.action_cost
+            reward -= 0
 
-        truncated = self.end_episode_on_success and self.n_steps == self.horizon
+        truncated = self.n_steps == self.horizon
         return reward, terminated, truncated
 
     def reset(self, seed: int = None, options: dict = None):
@@ -197,9 +326,16 @@ class PBNTargetEnv(gym.Env):
             self._seed(seed)
 
         if options is not None and "state" in options:
+            print("from state")
             self.graph.setState(options["state"])
         else:
-            self.graph.genRandState()
+            attractor = random.choice(self.all_attractors)
+            state = list(random.choice(attractor))
+            for i in range(len(state)):
+                if state[i] == "*":
+                    state[i] = random.randint(0, 1)
+
+            self.graph.setState(state)
 
         self.n_steps = 0
         observation = self.graph.getState()
@@ -212,8 +348,8 @@ class PBNTargetEnv(gym.Env):
     def get_state(self):
         return np.array(list(self.graph.getState().values()))
 
-    def render(self):
-        mode = self.render_mode
+    def render(self, mode=None):
+        mode = self.render_mode if not mode else mode
 
         if mode == "human":
             return self.get_state()
@@ -267,50 +403,6 @@ class PBNTargetEnv(gym.Env):
         del self.graph
 
 
-class Bittner28(PBNTargetEnv):
-    predictor_sets_path = Path(__file__).parent / "bittner" / "data"
-    genedata = predictor_sets_path / "genedata.xls"
-
-    # fmt: off
-    includeIDs = [234237, 324901, 759948, 25485, 324700, 43129, 266361, 108208, 40764, 130057, 39781, 49665, 39159, 23185,417218, 31251, 343072, 142076, 128100, 376725, 112500, 241530, 44563, 36950, 812276, 51018, 306013, 418105]
-    # fmt: on
-
-    def __init__(
-        self,
-        render_mode: str = "human",
-        render_no_cache: bool = False,
-        name: str = "Bittner-28",
-        horizon: int = 11,
-        reward_config: dict = None,
-        end_episode_on_success: bool = False,
-    ):
-        graph = utils.spawn(
-            file=self.genedata,
-            total_genes=28,
-            include_ids=self.includeIDs,
-            bin_method="median",
-            n_predictors=15,
-            predictor_sets_path=self.predictor_sets_path,
-        )
-
-        goal_config = {
-            "target_nodes": [324901],
-            "intervene_on": [234237],
-            "target_node_values": ((0,),),
-            "undesired_node_values": tuple(),
-            "horizon": horizon,
-        }
-        super().__init__(
-            graph,
-            goal_config,
-            render_mode,
-            render_no_cache,
-            name,
-            reward_config,
-            end_episode_on_success,
-        )
-
-
 class Bittner70(PBNTargetEnv):
     predictor_sets_path = Path(__file__).parent / "bittner" / "data"
     genedata = predictor_sets_path / "genedata.xls"
@@ -327,8 +419,9 @@ class Bittner70(PBNTargetEnv):
         name: str = None,
         horizon: int = 11,
         reward_config: dict = None,
-        end_episode_on_success: bool = False,
+        end_episode_on_success: bool = True,
     ):
+        print(f"its me, bittner-{self.N}")
         if not name:
             name = self.NAME
 
@@ -336,15 +429,15 @@ class Bittner70(PBNTargetEnv):
             file=self.genedata,
             total_genes=self.N,
             include_ids=self.includeIDs,
-            bin_method="kmeans",
-            n_predictors=5,
+            bin_method="median",
+            n_predictors=3,
             predictor_sets_path=self.predictor_sets_path,
         )
 
         goal_config = {
-            "target_nodes": [324901],
+            "target_nodes": [234237, 324901, 759948, 25485, 266361, 108208, 130057],
             "intervene_on": [234237],
-            "target_node_values": ((0,),),
+            "target_node_values": ((0, 0, 0, 0, 0, 0, 0),),
             "undesired_node_values": tuple(),
             "horizon": horizon,
         }
@@ -367,3 +460,133 @@ class Bittner100(Bittner70):
 class Bittner200(Bittner70):
     N = 200
     NAME = "Bittner-200"
+
+
+class Bittner7(PBNTargetEnv):
+    predictor_sets_path = Path(__file__).parent / "bittner" / "data"
+    genedata = predictor_sets_path / "genedata.xls"
+
+    includeIDs = [234237, 324901, 759948, 25485, 266361, 108208, 130057]
+    includeIDs = sorted(includeIDs)
+
+    N = 7
+    NAME = "Bittner-7"
+
+    def __init__(
+            self,
+            render_mode: str = "human",
+            render_no_cache: bool = False,
+            name: str = None,
+            horizon: int = 11,
+            reward_config: dict = None,
+            end_episode_on_success: bool = True,
+    ):
+        if not name:
+            name = self.NAME
+
+        print(f"initing {name}")
+
+        graph = utils.spawn(
+            file=self.genedata,
+            total_genes=self.N,
+            include_ids=self.includeIDs,
+            bin_method="median",
+            n_predictors=3,
+            predictor_sets_path=self.predictor_sets_path,
+        )
+
+        goal_config = {
+            "target_nodes": [234237, 324901, 759948, 25485, 266361, 108208, 130057],
+            "intervene_on": [234237, 324901, 759948, 25485, 266361, 108208, 130057],
+            "target_node_values": ((1, 1, 1, 1, 1, 1, 0),),
+            "undesired_node_values": tuple(),
+            "horizon": horizon,
+        }
+        super().__init__(
+            graph,
+            goal_config,
+            render_mode,
+            render_no_cache,
+            name,
+            reward_config,
+            end_episode_on_success,
+        )
+
+        # its too big for PBN > 10
+        if self.N < 11:
+            stg = self.graph.genSTG()
+            self.real_attractors = findAttractors(stg)
+            print(f"real attractors are: {self.real_attractors}")
+
+        self.all_attractors = get_attractors(self)
+
+        print(self.all_attractors)
+
+        self.target_nodes = sorted(self.includeIDs)
+        self.target_node_values = self.all_attractors[-1]
+        self.target_attractor = len(self.all_attractors) - 1  # last one
+
+    def statistical_attractors(self):
+        with open(f"data/attractors_{self.name}.pkl", 'r+b') as attractors:
+            try:
+                statistial_attractors = pkl.load(attractors)
+                print("reusing old attractors")
+            except:
+                print(f"Calculating state statistics for N = {self.N}")
+                print(f"it should take {10000} steps")
+                state_log = defaultdict(int)
+
+                for i in range(100):
+                    #print(i)
+                    _ = self.reset()
+                    for j in range(1000):
+                        state = tuple(self.render())
+                        state_log[state] += 1
+                        _ = self.step(0, force=True)
+
+                states = sorted(state_log.items(), key=lambda kv: kv[1], reverse=True)
+
+                statistial_attractors = [node for node, frequency in states[:4]]
+                pkl.dump(statistial_attractors, file=attractors)
+            return statistial_attractors
+
+    def is_attracting_state(self, state):
+        state = tuple(state)
+
+        for attractor in self.all_attractors:
+            for a_state in attractor:
+                for i in range(len(state)):
+                    if a_state[i] == '*':
+                        continue
+                    if a_state[i] != state[i]:
+                        break
+                else:
+                    return True
+        return False
+
+
+class Bittner10(Bittner7):
+    N = 10
+    NAME = "Bittner-10"
+
+
+class Bittner28(Bittner7):
+    N = 28
+    NAME = "Bittner-28"
+    def __init__(
+            self,
+            render_mode: str = "human",
+            render_no_cache: bool = False,
+            name: str = "Bittner-28",
+            horizon: int = 11,
+            reward_config: dict = None,
+            end_episode_on_success: bool = False,
+    ):
+        includeIDs = [234237, 324901, 759948, 25485, 324700, 43129, 266361, 108208, 40764, 130057, 39781, 49665, 39159,
+                      23185, 417218, 31251, 343072, 142076, 128100, 376725, 112500, 241530, 44563, 36950, 812276, 51018,
+                      306013, 418105]
+
+        includeIDs = sorted(includeIDs)
+
+        self.includeIDs = includeIDs
+        super().__init__()

@@ -64,6 +64,9 @@ def spawn(
     if total_genes != len(include_ids):
         include_ids = pad_ids(include_ids, total_genes, weight_ids)
 
+        # we need include_ids to be sorted for interoperability with cabean
+        include_ids = sorted(include_ids)
+
     gene_data = gene_data.loc[include_ids]  # Trim
     gene_data = binarise(gene_data, bin_method)  # Binarise
     gene_data = gene_data.drop_duplicates()  # Drop duplicate rows

@@ -57,6 +57,8 @@ def compute_ssd_hist(
         for _ in tqdm(range(SSD_RESETS), desc=f"SSD run for {env.name}"):
             all_ssds.append(_ssd_run(g, SSD_N // SSD_RESETS, BIT_FLIP_PROB, model, env))
 
+    print(len(all_ssds))
+    print(all_ssds[0])
     ssd = np.array(all_ssds)
 
     ssd = np.mean(ssd, axis=0)
@@ -77,11 +79,11 @@ def _ssd_run(g, iters, bit_flip_prob, model, env):
     for _ in range(iters):
         state = env.render()
         # Convert relevant part of state to binary string, then parse it as an int to get the bucket index.
-        bucket = env.render(mode="target_idx")
+        bucket = env.render()
         # AM: env.render in the line above does not accept the 'mode' argument. Therefore, a new
         #     getTargetIdx() method
         #
-        #bucket = env.getTargetIdx()
+        bucket = env.getTargetIdx()
         sub_ssd[bucket] += 1
 
         if not model:  # Control the environment
@@ -121,7 +123,7 @@ def eval_increase(
     Returns:
         float: the total increase across all favourable states.
     """
-    if original_ssd == None:  # Cache
+    if original_ssd is None:  # Cache
         original_ssd = compute_ssd_hist(
             env, iters=iters, resets=resets, bit_flip_prob=bit_flip_prob
         )

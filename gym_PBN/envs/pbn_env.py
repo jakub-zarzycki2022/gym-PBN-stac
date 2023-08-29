@@ -13,22 +13,32 @@ from .common.pbn import PBN
 class PBNEnv(gym.Env):
     metadata = {"render_modes": ["human", "PBN", "STG", "funcs", "idx", "float"]}
 
+    def set(self, new_state):
+        self.PBN.state = np.array(new_state)
+
+    def is_attracting_state(self, state):
+        return True
+        return tuple(state) in self.attracting_states
+
     def __init__(
         self,
         render_mode: str = "human",
         render_no_cache: bool = False,
-        PBN_data=[],
+        PBN_data=None,
         logic_func_data=None,
         name: str = None,
         goal_config: dict = None,
         reward_config: dict = None,
     ):
+        if PBN_data is None:
+            PBN_data = []
+
         print("normal pbn")
         self.PBN = PBN(PBN_data, logic_func_data)
 
         # Goal configuration
         goal_config = self._check_config(
-            goal_config, "goal", set(["target", "all_attractors"])
+            goal_config, "goal", {"target", "all_attractors"}
         )
         if (
             goal_config is None
@@ -40,9 +50,17 @@ class PBNEnv(gym.Env):
             assert (
                 type(goal_config["target_nodes"]) is set
             ), "Did you put multiple attractors as the target by mistake?"
-        self.target_nodes = goal_config["target_nodes"]
         # self.all_attractors = goal_config["all_attractors"]
         self.all_attractors = self.compute_attractors()
+        self.target_nodes = goal_config["target_nodes"]
+
+        for attractor in self.all_attractors:
+            if self.target_nodes & attractor:
+                self.target_nodes = self.target_nodes.union(attractor)
+
+        print(f"target nodes are {self.target_nodes}")
+
+        self.attracting_states = set.union(*self.all_attractors)
 
         # Reward configuration
         reward_config = self._check_config(
@@ -66,6 +84,7 @@ class PBNEnv(gym.Env):
         self.name = name
         self.render_mode = render_mode
         self.render_no_cache = render_no_cache
+        self.step_no = 0
 
     def _seed(self, seed: int = None):
         np.random.seed(seed)
@@ -103,7 +122,7 @@ class PBNEnv(gym.Env):
 
         return config
 
-    def step(self, action: int = 0) -> GYM_STEP_RETURN:
+    def step(self, action: int) -> GYM_STEP_RETURN:
         """Transition the environment by 1 step. Optionally perform an action.
 
         Args:
@@ -120,9 +139,13 @@ class PBNEnv(gym.Env):
             raise Exception(f"Invalid action {action}, not in action space.")
 
         if action != 0:  # Action 0 is taking no action.
-            self.PBN.flip(action - 1)
+            self.PBN.flip(action)
 
         self.PBN.step()
+        while not self.is_attracting_state(self.PBN.state):
+            self.PBN.step()
+
+        #self.step_no += 1
 
         observation = self.PBN.state
         reward, terminated, truncated = self._get_reward(observation, action)
@@ -131,7 +154,7 @@ class PBNEnv(gym.Env):
         return observation, reward, terminated, truncated, info
 
     def _get_reward(
-        self, observation: STATE, action: int
+        self, observation: STATE, action: int,
     ) -> Tuple[REWARD, TERMINATED, TRUNCATED]:
         """The Reward function.
 
@@ -146,16 +169,21 @@ class PBNEnv(gym.Env):
         observation_tuple = tuple(observation)
 
         if observation_tuple in self.target_nodes:
-            reward += self.successful_reward
+            reward += 20
             terminated = True
         else:
-            attractors_matched = sum(
-                observation_tuple in attractor for attractor in self.all_attractors
-            )
-            reward -= self.wrong_attractor_cost * attractors_matched
+            if self.is_attracting_state(observation):
+                reward -= 4
+            else:
+                raise ValueError
 
-        if action != 0:
-            reward -= self.action_cost
+            if action != 0:
+                reward -= 1
+            else:
+                reward -= 0
+
+        # if self.step_no > 15:
+        #     truncated = True
 
         return reward, terminated, truncated
 
@@ -166,9 +194,22 @@ class PBNEnv(gym.Env):
 
         state = None
         if options is not None and "state" in options:
-            state = self.PBN.reset(options["state"])
+            print(f"options are {options}")
+            state = options["state"]
+        else:
+            state = random.choice(tuple(self.attracting_states))
+
+        attr = None
+        while attr is None or len(attr) > 10:
+            attr = random.choice(self.all_attractors)
+
+        state = random.choice(tuple(attr))
+
         observation = self.PBN.reset(state)
+        if tuple(observation) not in self.attracting_states:
+            raise ValueError("state initial state should be an attractor")
         info = {"observation_idx": self._state_to_idx(observation)}
+        self.step_no = 0
         return observation, info
 
     def render(self, mode=None):

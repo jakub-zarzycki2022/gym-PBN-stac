@@ -6,12 +6,13 @@ import itertools
 import pickle
 import random
 import time
+from collections import defaultdict
 from os import path
 
 import networkx as nx
 import numpy as np
 from scipy.special import smirnov
-
+from scipy.stats import logistic
 
 class Node:
     def __init__(self, index, bittnerIndex, name, ID, LUTflag=False):
@@ -73,9 +74,11 @@ class Node:
                 ID = IDs[j]
                 x = state[ID]
                 X[j] = x
+            X[len(IDs)] = state[self.ID]
             currCOD = COD - prevCOD
             prevCOD = COD
             Ypred = np.matmul(X.T, A)
+            Ypred = logistic.cdf(Ypred)
             if Ypred < 0.5:
                 Y = 0
             else:
@@ -84,19 +87,30 @@ class Node:
         return probs
 
     def Predstep(self, state):
-        if self.value == None:
+        if self.value is None:
             raise Exception("Forgot to initialise the states")
+
+        # choose predictor
         r = random.random() * self.CODsum
         for i in range(len(self.predictors)):
             IDs, A, COD = self.predictors[i]
             if COD > r:
                 break
+
+        # relevant genes vector
         X = np.ones((len(IDs) + 1, 1))
         for j in range(len(IDs)):
             ID = IDs[j]
             x = state[ID]
             X[j] = x
+        X[len(IDs)] = state[self.ID]
+
+        # predict
+        # I think something was missing here, probably sigmoid
+        # compare paper DOI:10.1117/1.1289142 equation (2) and following paragraph
+        # I added simgmoid, it makes the most sense to me
         Ypred = np.matmul(X.T, A)
+        Ypred = logistic.cdf(Ypred)
         if Ypred < 0.5:
             Y = 0
         else:
@@ -104,6 +118,7 @@ class Node:
         return Y
 
     def LUTstep(self, state):
+        raise ValueError("you shouldn't be here")
         X = np.empty((len(self.inputIDs), 1))
         for j in range(len(self.inputIDs)):
             ID = self.inputIDs[j]
@@ -173,72 +188,66 @@ class Graph:
         self.base = base
         self.perturbations = False
         self.p = 0.001
+        self.is_directed = True
 
     @property
     def N(self):
         return len(self.nodes)
 
-    def genSTG(self, savepath):
-        if not savepath == None:
+    def genSTG(self, savepath=None):
+        if savepath is not None:
             if path.exists(savepath):
                 return pickle.load((open(savepath, "rb")))
 
-        a = [[0, 1]] * len(self.nodes)
-        possibleStates = list(itertools.product(*a))
         graphNodes = {}
-        for possibleState in possibleStates:
-            #                print("Going through: {0}".format(possibleState))
-            starttime = time.time()
+        stg = nx.DiGraph()
+        stg.add_nodes_from(itertools.product([0, 1], repeat=len(self.nodes)))
 
-            #                graphNodes[list(possibleState)] = ()
-            self.setState(list(possibleState))
+        for possibleState in itertools.product([0, 1], repeat=len(self.nodes)):
+
+            self.setState(possibleState)
             nextStates = self.getNextStates()
-            # adding on the inputs for the state
-            for (
-                ns
-            ) in nextStates:  # Going through each of next states from current state
-                state = ns
-                prob = nextStates[
-                    state
-                ]  # Probability of getting to the next state given current state
-                if (
-                    state in graphNodes.keys()
-                ):  # Going through each possible each state. Goal is to add self to their inputs.
-                    oldEntry = graphNodes[state]  # Entry for that next state
-                    inOld = oldEntry[0]  # Ond inputs for the next state
-                    outOld = oldEntry[1]  # old outputs for the next state
-                    inOld[
-                        possibleState
-                    ] = prob  # Adding self to the inputs with the probability
-                    graphNodes[state] = (inOld, outOld)
-                else:
-                    inNew = {possibleState: prob}
-                    graphNodes[state] = (inNew, None)
-            # Adding on the outputs for the state
-            if possibleState in graphNodes.keys():  # If it's already in
-                oldEntry = graphNodes[possibleState]  # Copy the old entry
-                inOld = oldEntry[0]
-                graphNodes[possibleState] = (
-                    inOld,
-                    nextStates,
-                )  # Return the old entry with the outputs appended.
-                # the next state will not be overridden as it only gets added on at this step.
-            else:  # If it's new, then creating an entry
-                graphNodes[possibleState] = ({}, nextStates)
-            endtime = time.time()
-        #                print("Time elapsed: {0}".format(endtime-starttime))
-        if not savepath == None:
-            pickle.dump(graphNodes, open(savepath, "wb"))
-        return graphNodes
 
-    def getNextStates(self):
+            for state in nextStates:
+                stg.add_edge(possibleState, state)
+
+        if savepath is not None:
+            pickle.dump(graphNodes, open(savepath, "wb"))
+        return stg
+
+    # async version of getNextStates
+    def getNextStates(self, state=None):
+        probs = []
+        for node in self.nodes:
+            prob = node.getStateProbs(self.getState())
+            probs = probs + [prob]
+
+        nextStates = defaultdict(float)
+        state = self.getState().values() if state is None else state
+        for i in range(len(state)):
+            nextState = list(state)
+            prob = probs[i]
+#            print(prob)
+            if prob[0] > 0.:
+                nextState[i] = 0
+                nextStates[tuple(nextState)] += prob[0] / len(state)
+                #print(f"{i} added {nextState} to {state}")
+            if prob[1] > 0.:
+                nextState[i] = 1
+                nextStates[tuple(nextState)] += prob[1] / len(state)
+                #print(f"{i} added {nextState} to {state}")
+
+        return nextStates
+
+    # sync version of getNextStates
+    def sync_getNextStates(self):
         probs = []
         for node in self.nodes:
             prob = node.getStateProbs(self.getState())
             probs = probs + [prob]
         a = [[0, 1]] * len(self.nodes)
         possibleStates = list(itertools.product(*a))
-        nextStates = {}
+        nextStates = defaultdict(float)
         for state in possibleStates:
             p = 1
             for i in range(len(state)):
@@ -272,7 +281,7 @@ class Graph:
         else:
             raise ValueError(f"Invalid action, no node at index {index}")
 
-    def step(self):
+    def synch_step(self):
         if self.perturbations:
             pertFlag = np.random.rand(len(self.nodes)) < self.p
             if pertFlag.any():
@@ -290,6 +299,13 @@ class Graph:
             oldState = self.getState()
             for i in range(0, len(self.nodes)):
                 self.nodes[i].step(oldState)
+
+    # async. step
+    def step(self, i=None):
+        oldState = self.getState()
+        i = random.randint(0, len(self.nodes) - 1) if i is None else i
+        self.nodes[i].step(oldState)
+        return tuple(self.getState().values())
 
     def getState(self):
         outputState = {}
@@ -343,8 +359,14 @@ class Graph:
         for x in range(0, len(self.nodes)):
             self.nodes[x].value = int(random.randint(0, self.base - 1))
 
+    def getAttractors(self, verbal=False):
+        attractors = list(attractorSetFinder(self.nodes, self.edges, verbal=True))
+        return attractors
 
-def findAttractors(STG):
+
+# wiesza mi kompa na N = 10
+# i will mark it as deprecated
+def dep_findAttractors(STG):
     STG = stripSTG(STG)
     unknowns = {}
     GA = {}
@@ -353,12 +375,18 @@ def findAttractors(STG):
         unknowns[key] = [key]  # (Status, tags)
     unknowns, GA, NGA = identify(unknowns, GA, NGA, STG)
     while len(unknowns) > 0:
-        print("Unknowns to clean up left: {0}".format(len(unknowns)))
+        print(f"Unknowns to clean up left: {len(unknowns)}, {len(GA)}, {len(NGA)}, {len(STG)}")
         toRemove = list(unknowns.keys())[0]
+        print("remove node")
         unknowns, GA, NGA, STG = removeNode(unknowns, GA, NGA, toRemove, STG)
+        print("identify")
         unknowns, GA, NGA = identify(unknowns, GA, NGA, STG)
         print("GA: {0}".format(GA))
     return GA
+
+
+def findAttractors(stg):
+    return list(nx.attracting_components(stg))
 
 
 def stripSTG(STG):
@@ -373,8 +401,9 @@ def stripSTG(STG):
 def removeNode(unknowns, GA, NGA, toRemove, STG):
     inNodes = STG[toRemove][0]
     outNodes = STG[toRemove][1]
-    print("n In: {0}".format(len(inNodes)))
-    print("n Out: {0}".format(len(outNodes)))
+    #print("n In: {0}".format(len(inNodes)))
+    #print("n Out: {0}".format(len(outNodes)))
+    loop_counter = -0
     for inn in inNodes:
         if inn != toRemove:
 
@@ -406,7 +435,6 @@ def removeNode(unknowns, GA, NGA, toRemove, STG):
             STG[inn] = (inNodeIn, inNodeOut)  # Push it in to the STG!
 
     # Adding my inputs to the inputs of my outputs. Also removing self.
-
     for out in outNodes:  # Going through my outputs
         if out != toRemove:
             outNodesIn, outNodesOut = STG[
@@ -461,8 +489,10 @@ def nodePermutations(stateSoFar, possibleStates, acc, prob):
         return acc
 
 
+# I don't think its ever used.
+# Why is it here?
 # Graph that represents the State Transotion Graph of a Boolean Network.
-class StateGraph:
+class dep_StateGraph:
     def __init__(self):
         self.nodes = []
         self.edges = []

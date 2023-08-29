@@ -3,18 +3,18 @@ import multiprocessing
 import pickle
 from functools import partial
 from pathlib import Path
+from sklearn.metrics import mean_squared_error
 
 import numpy as np
 import pandas as pd
 from numba import njit
 from tqdm.contrib.concurrent import process_map
 
-
 def generate_predictor_sets(
-    gene_data: pd.DataFrame,
-    k=3,
-    n_predictors=5,
-    savepath="predictor_sets.pkl",
+        gene_data: pd.DataFrame,
+        k=3,
+        n_predictors=5,
+        savepath="predictor_sets.pkl",
 ):
     gene_data = gene_data.drop("Name", axis=1)
     n_samples = len(gene_data.columns)
@@ -84,7 +84,7 @@ def add_to_buff(buff, data):
     i = 0
     while i < n_predictors - 1:
         # If there's an empty slot in the buffer
-        if buff[0, i] == None:
+        if buff[0, i] is None:
             buff[:, i] = data  # Just add it
             break
         elif buff[0, i] < COD:  # If this is a better predictor
@@ -102,19 +102,6 @@ def add_to_buff(buff, data):
             #     break
 
 
-@njit
-def MSE(x, y):
-    # Cannot have 1d arrays ret with Numba
-    return np.mean((x - y) ** 2)
-
-
-@njit
-def g(x):
-    # Numba does not work with the simple (x >= 0.5).astype(int)
-    return np.where(x >= 0.5, 1, 0).astype(np.uint8)
-
-
-@njit
 def gen_COD(X, Y):
     """Schmulevich's (?) method for generating a COD. The closed form solution."""
     # Need float everywhere for Numba
@@ -126,12 +113,12 @@ def gen_COD(X, Y):
     C = np.dot(X.T, Y)
     A = np.dot(Rp, C)  # for comparison
 
-    y_pred = g(np.dot(X, A))
-    y_pred_null = g(ones * np.mean(Y)) + 10**-8
-    e_null = MSE(y_pred_null, Y)
+    y_pred = np.dot(X, A).round()
+    y_pred_null = ((ones * np.mean(Y)).round()).astype(int) + 10 ** -8
+    e_null = mean_squared_error(y_pred_null, Y)
 
-    e = MSE(y_pred, Y)
+    e = mean_squared_error(y_pred, Y)
     COD = (e_null - e) / e_null
     if COD < 0:
-        COD = 10**-8
+        COD = 10 ** -8
     return COD, A

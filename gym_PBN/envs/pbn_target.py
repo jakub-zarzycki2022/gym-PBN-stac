@@ -291,6 +291,7 @@ class PBNTargetEnv(gym.Env):
                     break
             else:
                 return True
+        return False
 
     def _get_reward(self, observation: STATE, action: int) -> Tuple[REWARD, TERMINATED, TRUNCATED]:
         """The Reward function.

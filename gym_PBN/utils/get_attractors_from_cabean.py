@@ -38,19 +38,19 @@ def parse_attractors(cabean_out):
 
 def get_attractors(env):
     filename = f"data/attractors_{env.name}.pkl"
-
-    try:
-        with open(filename, 'rb') as attractors_file:
-            return pickle.load(attractors_file)
-
-    except FileNotFoundError:
-        with open(filename, 'wb') as attractors_file:
-            cabean_out = get_model(env)
-            attractors = list(parse_attractors(cabean_out).values())
-            print("i generated:")
-            print(attractors)
-            pickle.dump(attractors, attractors_file)
-            return attractors
+    #
+    # try:
+    #     with open(filename, 'rb') as attractors_file:
+    #         return pickle.load(attractors_file)
+    #
+    # except FileNotFoundError:
+    with open(filename, 'wb+') as attractors_file:
+        cabean_out = get_model(env)
+        attractors = list(parse_attractors(cabean_out).values())
+        print("i generated:")
+        print(attractors)
+        pickle.dump(attractors, attractors_file)
+        return attractors
 
 # for testing
 sample_cabean_out = r"""***************************************************************************

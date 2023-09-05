@@ -38,6 +38,7 @@ class PBNTargetEnv(gym.Env):
         reward_config: dict = None,
         end_episode_on_success: bool = False,
     ):
+        self.target = None
         self.graph = graph
 
         # Goal configuration
@@ -64,9 +65,11 @@ class PBNTargetEnv(gym.Env):
         self.end_episode_on_success = end_episode_on_success
 
         if "horizon" in goal_config.keys():
+            print("setting from config")
             self.horizon = goal_config["horizon"]
         else:
-            self.horizon = 11
+            print("setting 100")
+            self.horizon = 100
 
         # Reward configuration
         reward_config = self._check_config(
@@ -240,7 +243,8 @@ class PBNTargetEnv(gym.Env):
            Steps until it hits an attractor.
 
         Args:
-            action (int, optional): The action to perform (1-indexed node to flip). Defaults to 0, meaning no action.
+            action (int, optional): The set of action to perform (1-indexed node to flip).
+                                     0 means no action
             force (bool, optional): Force graph to only make single seps, and don't care about attractors.
 
         Raises:
@@ -251,8 +255,8 @@ class PBNTargetEnv(gym.Env):
                  Consists of the resulting environment state, the associated reward, the termination and truncation status and additional info.
         """
         #print(f"for state {self.get_state()} got action {action}")
-        if not self.action_space.contains(action):
-            raise Exception(f"Invalid action {action}, not in action space.")
+        # if not self.action_space.contains(action):
+        #     raise Exception(f"Invalid action {action}, not in action space.")
 
         self.n_steps += 1
         #print(f"action = {action}")
@@ -262,7 +266,7 @@ class PBNTargetEnv(gym.Env):
         if action != 0:  # Action 0 is taking no action.
             self.graph.flipNode(action - 1)
 
-        self.graph.step()
+        self.graph.step(action)
         while not force and not self.is_attracting_state(self.graph.getState().values()):
             self.graph.step()
 
@@ -283,7 +287,10 @@ class PBNTargetEnv(gym.Env):
         return state
 
     def in_target(self, observation):
-        for a_state in self.all_attractors[self.target_attractor]:
+        if self.target is None:
+            raise ValueError("Target should have been initialized during env.reset()")
+
+        for a_state in self.target:
             for i in range(len(observation)):
                 if a_state[i] == '*':
                     continue
@@ -304,10 +311,7 @@ class PBNTargetEnv(gym.Env):
             Tuple[REWARD, TERMINATED, TRUNCATED]: Tuple of the reward and the environment done status.
         """
         reward, terminated = 0, False
-        observation = self._to_map(observation)  # HACK Needed for some envs
-        observation = tuple(
-            [observation[x] for x in sorted(observation)]
-        )  # Filter it down
+        observation = tuple(observation.values())
 
         if self.in_target(observation):
             reward += 20
@@ -326,17 +330,16 @@ class PBNTargetEnv(gym.Env):
         if seed:
             self._seed(seed)
 
-        if options is not None and "state" in options:
-            print("from state")
-            self.graph.setState(options["state"])
-        else:
-            attractor = random.choice(self.all_attractors)
-            state = list(random.choice(attractor))
-            for i in range(len(state)):
-                if state[i] == "*":
-                    state[i] = random.randint(0, 1)
+        state_attractor, target_attractor = random.sample(self.all_attractors, 2)
+        state = list(random.choice(state_attractor))
+        target = list(random.choice(target_attractor))
+        for i in range(len(state)):
+            if state[i] == "*":
+                state[i] = random.randint(0, 1)
+            if target[i] == "*":
+                target[i] = random.randint(0, 1)
 
-            self.graph.setState(state)
+        self.graph.setState(state)
 
         self.n_steps = 0
         observation = self.graph.getState()
@@ -344,10 +347,15 @@ class PBNTargetEnv(gym.Env):
             "observation_idx": self._state_to_idx(observation),
             "observation_dict": observation,
         }
-        return self.get_state(), info
+
+        self.target = target_attractor
+        return (tuple(state), tuple(target)), info
 
     def get_state(self):
         return np.array(list(self.graph.getState().values()))
+
+    def setTarget(self, target):
+        self.target = target
 
     def render(self, mode=None):
         mode = self.render_mode if not mode else mode
@@ -418,7 +426,7 @@ class Bittner70(PBNTargetEnv):
         render_mode: str = "human",
         render_no_cache: bool = False,
         name: str = None,
-        horizon: int = 11,
+        horizon: int = 69,
         reward_config: dict = None,
         end_episode_on_success: bool = True,
     ):
@@ -478,7 +486,7 @@ class Bittner7(PBNTargetEnv):
             render_mode: str = "human",
             render_no_cache: bool = False,
             name: str = None,
-            horizon: int = 11,
+            horizon: int = 100,
             reward_config: dict = None,
             end_episode_on_success: bool = True,
     ):
@@ -571,6 +579,11 @@ class Bittner10(Bittner7):
     NAME = "Bittner-10"
 
 
+class Bittner30(Bittner7):
+    N = 30
+    NAME = "Bittner-30"
+
+
 class Bittner28(Bittner7):
     N = 28
     NAME = "Bittner-28"
@@ -579,7 +592,7 @@ class Bittner28(Bittner7):
             render_mode: str = "human",
             render_no_cache: bool = False,
             name: str = "Bittner-28",
-            horizon: int = 11,
+            horizon: int = 100,
             reward_config: dict = None,
             end_episode_on_success: bool = False,
     ):

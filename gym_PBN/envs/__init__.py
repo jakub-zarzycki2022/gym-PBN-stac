@@ -12,3 +12,11 @@ from gym_PBN.envs.pbn_target import (
     Bittner100,
     Bittner200,
 )
+
+from gym_PBN.envs.pbn_target_multi import (
+    PBNTargetMultiEnv,
+    BittnerMulti7,
+    BittnerMulti10,
+    BittnerMulti28,
+    BittnerMulti30
+)

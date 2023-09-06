@@ -69,3 +69,24 @@ register(
     id="gym-PBN/PBCN-self-triggering-v0",
     entry_point="gym_PBN.envs:PBCNSelfTriggeringEnv",
 )
+
+register(
+    id="gym-PBN/BittnerMulti-7-v0",
+    entry_point="gym_PBN.envs:BittnerMulti7",
+    nondeterministic=True,
+    max_episode_steps=100,
+)
+
+register(
+    id="gym-PBN/BittnerMulti-10-v0",
+    entry_point="gym_PBN.envs:BittnerMulti10",
+    nondeterministic=True,
+    max_episode_steps=100,
+)
+
+register(
+    id="gym-PBN/BittnerMulti-28-v0",
+    entry_point="gym_PBN.envs:BittnerMulti28",
+    nondeterministic=True,
+    max_episode_steps=100,
+)

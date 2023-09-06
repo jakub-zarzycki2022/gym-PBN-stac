@@ -189,6 +189,7 @@ class Graph:
         self.perturbations = False
         self.p = 0.001
         self.is_directed = True
+        self.fliped = set()
 
     @property
     def N(self):

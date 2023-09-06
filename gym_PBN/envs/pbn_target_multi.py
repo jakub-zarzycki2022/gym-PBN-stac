@@ -7,6 +7,7 @@ import pickle as pkl
 import gymnasium as gym
 import networkx as nx
 import numpy as np
+import torch
 from gymnasium.spaces import Discrete, MultiBinary, MultiDiscrete
 from gym_PBN.types import GYM_STEP_RETURN, REWARD, STATE, TERMINATED, TRUNCATED
 
@@ -115,7 +116,7 @@ class PBNTargetMultiEnv(gym.Env):
 
         #s = self.render()
         #print(self.is_attracting_state(s), s, action)
-        for action in actions:
+        for action in np.unique(actions):
             if action != 0:  # Action 0 is taking no action.
                 self.graph.flipNode(action - 1)
 
@@ -170,7 +171,7 @@ class PBNTargetMultiEnv(gym.Env):
             reward += 1000
             terminated = True
 
-        reward -= 1 * len(actions)
+        reward -= 1 * len(np.unique(actions))
 
         truncated = self.n_steps == self.horizon
         return reward, terminated, truncated

@@ -583,6 +583,10 @@ class Bittner30(Bittner7):
     N = 30
     NAME = "Bittner-30"
 
+class Bittner50(Bittner7):
+    N = 50
+    NAME = "Bittner-50"
+
 
 class Bittner28(Bittner7):
     N = 28

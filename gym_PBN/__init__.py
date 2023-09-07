@@ -40,6 +40,13 @@ register(
 )
 
 register(
+    id="gym-PBN/Bittner-50-v0",
+    entry_point="gym_PBN.envs:Bittner50",
+    nondeterministic=True,
+    max_episode_steps=100,
+)
+
+register(
     id="gym-PBN/Bittner-100-v0",
     entry_point="gym_PBN.envs:Bittner100",
     nondeterministic=True,

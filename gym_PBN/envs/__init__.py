@@ -8,6 +8,7 @@ from gym_PBN.envs.pbn_target import (
     Bittner10,
     Bittner28,
     Bittner30,
+    Bittner50,
     Bittner70,
     Bittner100,
     Bittner200,

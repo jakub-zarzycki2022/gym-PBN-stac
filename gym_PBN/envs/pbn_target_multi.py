@@ -106,6 +106,8 @@ class PBNTargetMultiEnv(gym.Env):
         return config
 
     def step(self, actions, force=False):
+        if not isinstance(actions, list):
+            actions = actions.unique().tolist()
 
         #print(f"for state {self.get_state()} got action {action}")
         # if not self.action_space.contains(action):
@@ -155,7 +157,10 @@ class PBNTargetMultiEnv(gym.Env):
         return False
 
     def _get_reward(self, observation: STATE, actions) -> Tuple[REWARD, TERMINATED, TRUNCATED]:
-        assert isinstance(actions, list)
+
+        if not isinstance(actions, list):
+            actions = actions.tolist()
+            actions = np.unique(actions)
         """The Reward function.
 
         Args:

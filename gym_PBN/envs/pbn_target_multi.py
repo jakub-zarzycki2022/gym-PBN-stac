@@ -155,6 +155,7 @@ class PBNTargetMultiEnv(gym.Env):
         return False
 
     def _get_reward(self, observation: STATE, actions) -> Tuple[REWARD, TERMINATED, TRUNCATED]:
+        assert isinstance(actions, list)
         """The Reward function.
 
         Args:
@@ -171,7 +172,7 @@ class PBNTargetMultiEnv(gym.Env):
             reward += 1000
             terminated = True
 
-        reward -= 1 * len(np.unique(actions))
+        reward -= 1 * len(actions)
 
         truncated = self.n_steps == self.horizon
         return reward, terminated, truncated

@@ -116,7 +116,7 @@ class PBNTargetMultiEnv(gym.Env):
 
         #s = self.render()
         #print(self.is_attracting_state(s), s, action)
-        for action in np.unique(actions):
+        for action in actions:
             if action != 0:  # Action 0 is taking no action.
                 self.graph.flipNode(action - 1)
 

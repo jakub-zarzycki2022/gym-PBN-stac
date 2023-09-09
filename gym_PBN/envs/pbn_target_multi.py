@@ -69,6 +69,12 @@ class PBNTargetMultiEnv(gym.Env):
         self.non_attractors = set()
         self.counter = 0
 
+        # distribution for choosing starting end target attractors
+        # initially uniform, will be to boost the frequency of hard cases
+        self.probabilities = []
+        self.initial_state = None
+        self.target_state = None
+
     def _seed(self, seed: int = None):
         np.random.seed(seed)
         random.seed(seed)
@@ -385,6 +391,7 @@ class BittnerMulti7(PBNTargetMultiEnv):
             print(f"real attractors are: {self.real_attractors}")
 
         self.all_attractors = get_attractors(self)
+        self.probabilities = [1 / len(self.all_attractors)] * len(self.all_attractors)
 
         print(self.all_attractors)
 
@@ -439,6 +446,11 @@ class BittnerMulti10(BittnerMulti7):
 class BittnerMulti30(BittnerMulti7):
     N = 30
     NAME = "BittnerMulti-30"
+
+
+class BittnerMulti50(BittnerMulti7):
+    N = 50
+    NAME = "BittnerMulti-50"
 
 
 class BittnerMulti28(BittnerMulti7):

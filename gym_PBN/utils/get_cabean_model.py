@@ -1,3 +1,4 @@
+import os
 import subprocess
 from collections import defaultdict
 
@@ -37,7 +38,11 @@ def translate(logic_function):
 
 
 def get_model(env):
-    # Load env
+    model_out_path = f"kaban/results/model_{env.name}.out"
+    if os.path.isfile(model_out_path):
+        print(f"reloading model form {model_out_path}")
+        with open(f"{model_out_path}") as f:
+            return f.read()
 
     g = env.graph
 
@@ -88,5 +93,9 @@ def get_model(env):
         f.write(out)
 
     out = subprocess.run(["cabean", f"models/model_{env.name}.ispl"], capture_output=True, encoding='utf-8')
+
+    print(f"saving model to {model_out_path}")
+    with open(f"{model_out_path}", "w") as f:
+        f.write(out.stdout)
 
     return out.stdout

@@ -97,3 +97,10 @@ register(
     nondeterministic=True,
     max_episode_steps=100,
 )
+
+register(
+    id="gym-PBN/BittnerMulti-50-v0",
+    entry_point="gym_PBN.envs:BittnerMulti50",
+    nondeterministic=True,
+    max_episode_steps=100,
+)

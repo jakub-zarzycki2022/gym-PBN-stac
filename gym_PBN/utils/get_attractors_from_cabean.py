@@ -44,6 +44,7 @@ def get_attractors(env):
     #         return pickle.load(attractors_file)
     #
     # except FileNotFoundError:
+    # wb+ does not erase the original file
     with open(filename, 'wb+') as attractors_file:
         cabean_out = get_model(env)
         attractors = list(parse_attractors(cabean_out).values())

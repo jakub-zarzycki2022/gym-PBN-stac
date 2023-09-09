@@ -19,5 +19,6 @@ from gym_PBN.envs.pbn_target_multi import (
     BittnerMulti7,
     BittnerMulti10,
     BittnerMulti28,
-    BittnerMulti30
+    BittnerMulti30,
+    BittnerMulti50,
 )

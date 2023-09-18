@@ -74,6 +74,9 @@ class PBNTargetMultiEnv(gym.Env):
         self.probabilities = []
         self.initial_state = None
         self.target_state = None
+        self.initial_state_id = -1
+        self.target_state_id = -1
+        self.recent_actions = defaultdict(lambda: 10)
 
     def _seed(self, seed: int = None):
         np.random.seed(seed)
@@ -115,22 +118,28 @@ class PBNTargetMultiEnv(gym.Env):
         if not isinstance(actions, list):
             actions = actions.unique().tolist()
 
-        #print(f"for state {self.get_state()} got action {action}")
-        # if not self.action_space.contains(action):
-        #     raise Exception(f"Invalid action {action}, not in action space.")
-
         self.n_steps += 1
-        #print(f"action = {action}")
 
-        #s = self.render()
-        #print(self.is_attracting_state(s), s, action)
         for action in actions:
             if action != 0:  # Action 0 is taking no action.
                 self.graph.flipNode(action - 1)
+                self.recent_actions[action - 1] -= 1
 
-        self.graph.step()
+                if self.recent_actions[action - 1] == 0:
+                    self.recent_actions.pop(action - 1)
+
+        self.graph.step(list(self.recent_actions.keys()))
         while not force and not self.is_attracting_state(self.graph.getState().values()):
-            self.graph.step()
+            to_remove = []
+            for action in self.recent_actions:
+                self.recent_actions[action] -= 1
+                if self.recent_actions[action] == 0:
+                    to_remove.append(action)
+
+            for action in to_remove:
+                self.recent_actions.pop(action)
+
+            self.graph.step(list(self.recent_actions.keys()))
 
         observation = self.graph.getState()
         reward, terminated, truncated = self._get_reward(observation, actions)
@@ -140,6 +149,30 @@ class PBNTargetMultiEnv(gym.Env):
         }
 
         return self.get_state(), reward, terminated, truncated, info
+
+    def rework_probas(self, episode_len):
+        proba_eps = 0.1 * 1 / len(self.all_attractors)
+        min_prob = 0.1 * 1 / len(self.all_attractors)
+        max_prob = 0.5
+
+        if episode_len < 20:
+            self.probabilities[self.state_attractor_id] -= proba_eps
+            self.probabilities[self.target_attractor_id] -= proba_eps
+            self.probabilities[self.state_attractor_id] = max(self.probabilities[self.state_attractor_id], min_prob)
+            self.probabilities[self.target_attractor_id] = max(self.probabilities[self.target_attractor_id], min_prob)
+
+        if episode_len >= 99:
+            self.probabilities[self.state_attractor_id] += proba_eps
+            self.probabilities[self.target_attractor_id] += proba_eps
+            self.probabilities[self.state_attractor_id] = min(self.probabilities[self.state_attractor_id], max_prob)
+            self.probabilities[self.target_attractor_id] = min(self.probabilities[self.target_attractor_id], max_prob)
+
+        for i in range(len(self.probabilities)):
+            self.probabilities[i] = max(min_prob, self.probabilities[i])
+
+        s = sum(self.probabilities)
+        for i in range(len(self.probabilities)):
+            self.probabilities[i] /= s
 
     def _to_map(self, state):
         getIDs = getattr(self.graph, "getIDs", None)
@@ -193,9 +226,23 @@ class PBNTargetMultiEnv(gym.Env):
         if seed:
             self._seed(seed)
 
-        state_attractor, target_attractor = random.sample(self.all_attractors, 2)
+        self.state_attractor_id, self.target_attractor_id = np.random.choice(range(len(self.all_attractors)),
+                                                                             size=2,
+                                                                             replace=False,
+                                                                             p=self.probabilities)
+
+        assert self.state_attractor_id != self.target_attractor_id
+
+        state_attractor = self.all_attractors[self.state_attractor_id]
+        target_attractor = self.all_attractors[self.target_attractor_id]
+
+        # x = random.randint(0, 20)
+        # if x > 19:
+        #     print(self.probabilities)
+
         state = list(random.choice(state_attractor))
         target = list(random.choice(target_attractor))
+
         for i in range(len(state)):
             if state[i] == "*":
                 state[i] = random.randint(0, 1)

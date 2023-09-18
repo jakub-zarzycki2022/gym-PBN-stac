@@ -304,18 +304,24 @@ class Graph:
 
     # async. step
     def step(self, changed_nodes: list = None, i=None):
-        oldState = self.getState()
+        oldState = self.getLabeledState()
         i = random.randint(0, len(self.nodes) - 1) if i is None else i
         while i in changed_nodes:
             i = random.randint(0, len(self.nodes) - 1)
         self.nodes[i].step(oldState)
-        return tuple(self.getState().values())
+        return self.getState()
+
+    def getLabeledState(self):
+        outputState = {}
+        for node in self.nodes:
+            outputState[node.ID] = node.value
+        return outputState
 
     def getState(self):
         outputState = {}
         for node in self.nodes:
             outputState[node.ID] = node.value
-        return outputState
+        return tuple(outputState.values())
 
     def getNames(self):
         names = []

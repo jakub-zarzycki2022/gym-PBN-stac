@@ -132,7 +132,7 @@ class PBNTargetMultiEnv(gym.Env):
 
         observation = self.graph.getState()
         self.graph.step(list(self.recent_actions.keys()))
-        while not self.is_attracting_state(observation.values()):  # maybe this one can be improved?
+        while not self.is_attracting_state(observation):
             to_remove = []
             for action in self.recent_actions:
                 self.recent_actions[action] -= 1
@@ -142,7 +142,7 @@ class PBNTargetMultiEnv(gym.Env):
             for action in to_remove:
                 self.recent_actions.pop(action)
 
-            self.graph.step(list(self.recent_actions.keys()))
+            observation = self.graph.step(list(self.recent_actions.keys()))
 
         reward, terminated, truncated = self._get_reward(observation, actions)
         info = {
@@ -209,7 +209,7 @@ class PBNTargetMultiEnv(gym.Env):
             Tuple[REWARD, TERMINATED, TRUNCATED]: Tuple of the reward and the environment done status.
         """
         reward, terminated = 0, False
-        observation = tuple(observation.values())
+        observation = tuple(observation)
 
         if self.in_target(observation):
             reward += 1000
@@ -440,10 +440,14 @@ class BittnerMulti7(PBNTargetMultiEnv):
                         stars += 1
                         positions.append(i)
 
-                for p in product([0, 1], repeats=stars):
+                if stars == 0:
+                    self.attracting_states.add(tuple(state))
+
+                for p in product([0, 1], repeat=stars):
+                    state_mutable = list(state)
                     for i, pos in enumerate(positions):
-                        state[pos] = p[i]
-                        self.attracting_states.add(tuple(state))
+                        state_mutable[pos] = p[i]
+                        self.attracting_states.add(tuple(state_mutable))
 
 
         self.attractor_count = len(self.all_attractors)

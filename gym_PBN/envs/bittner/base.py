@@ -92,15 +92,13 @@ class Node:
 
         # choose predictor
         r = random.random() * self.CODsum
-        for i in range(len(self.predictors)):
-            IDs, A, COD = self.predictors[i]
+        for IDs, A, COD in self.predictors:
             if COD > r:
                 break
 
         # relevant genes vector
         X = np.ones((len(IDs) + 1, 1))
-        for j in range(len(IDs)):
-            ID = IDs[j]
+        for j, ID in enumerate(IDs):
             x = state[ID]
             X[j] = x
         X[len(IDs)] = state[self.ID]
@@ -110,8 +108,11 @@ class Node:
         # compare paper DOI:10.1117/1.1289142 equation (2) and following paragraph
         # I added simgmoid, it makes the most sense to me
         Ypred = np.matmul(X.T, A)
-        Ypred = logistic.cdf(Ypred)
-        if Ypred < 0.5:
+
+        # logistic.cdf turs out to be expensive to compute
+        # Ypred = logistic.cdf(Ypred)
+        # x < 0. <=> sigmoid(x) < 0.5
+        if Ypred < 0.:
             Y = 0
         else:
             Y = 1
@@ -302,10 +303,10 @@ class Graph:
                 self.nodes[i].step(oldState)
 
     # async. step
-    def step(self, changed_nodes: int = None, i=None):
+    def step(self, changed_nodes: list = None, i=None):
         oldState = self.getState()
         i = random.randint(0, len(self.nodes) - 1) if i is None else i
-        while i == changed_nodes:
+        while i in changed_nodes:
             i = random.randint(0, len(self.nodes) - 1)
         self.nodes[i].step(oldState)
         return tuple(self.getState().values())

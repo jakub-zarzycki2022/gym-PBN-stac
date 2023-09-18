@@ -1,5 +1,6 @@
 import random
 from collections import defaultdict
+from itertools import product
 from pathlib import Path
 from typing import List, Set, Tuple, Union
 import pickle as pkl
@@ -18,8 +19,8 @@ from gym_PBN.utils.get_attractors_from_cabean import get_attractors
 
 
 def state_equals(state1, state2):
-    for i in range(len(state2)):
-        if state1[i] != state2[i]:
+    for x, y in zip(state1, state2):
+        if x != y:
             return False
     return True
 
@@ -67,6 +68,7 @@ class PBNTargetMultiEnv(gym.Env):
 
         self.all_attractors = []
         self.non_attractors = set()
+        self.attracting_states = set()
         self.counter = 0
 
         # distribution for choosing starting end target attractors
@@ -103,14 +105,14 @@ class PBNTargetMultiEnv(gym.Env):
         Returns:
             dict: The config after it has been checked and initialized to default values if it was empty to begin with.
         """
-        if config:
-            missing_keys = required_keys - set(config.keys())
-            if len(missing_keys) > 1:  # If any of the required keys are missing
-                raise ValueError(
-                    f"Invalid {_type} config provided. The following required values are missing: {', '.join(missing_keys)}."
-                )
-        else:
-            config = default_values
+        # if config:
+        #     missing_keys = required_keys - set(config.keys())
+        #     if len(missing_keys) > 1:  # If any of the required keys are missing
+        #         raise ValueError(
+        #             f"Invalid {_type} config provided. The following required values are missing: {', '.join(missing_keys)}."
+        #         )
+        # else:
+        #     config = default_values
 
         return config
 
@@ -128,8 +130,9 @@ class PBNTargetMultiEnv(gym.Env):
                 if self.recent_actions[action - 1] == 0:
                     self.recent_actions.pop(action - 1)
 
+        observation = self.graph.getState()
         self.graph.step(list(self.recent_actions.keys()))
-        while not force and not self.is_attracting_state(self.graph.getState().values()):
+        while not self.is_attracting_state(observation.values()):  # maybe this one can be improved?
             to_remove = []
             for action in self.recent_actions:
                 self.recent_actions[action] -= 1
@@ -141,18 +144,17 @@ class PBNTargetMultiEnv(gym.Env):
 
             self.graph.step(list(self.recent_actions.keys()))
 
-        observation = self.graph.getState()
         reward, terminated, truncated = self._get_reward(observation, actions)
         info = {
             "observation_idx": self._state_to_idx(observation),
             "observation_dict": observation,
         }
 
-        return self.get_state(), reward, terminated, truncated, info
+        return observation, reward, terminated, truncated, info
 
     def rework_probas(self, episode_len):
-        proba_eps = 0.1 * 1 / len(self.all_attractors)
-        min_prob = 0.1 * 1 / len(self.all_attractors)
+        proba_eps = 0.1 * 1 / self.attractor_count
+        min_prob = 0.1 * 1 / self.attractor_count
         max_prob = 0.5
 
         if episode_len < 20:
@@ -182,15 +184,12 @@ class PBNTargetMultiEnv(gym.Env):
         return state
 
     def in_target(self, observation):
-        if self.target is None:
-            raise ValueError("Target should have been initialized during env.reset()")
-
         for a_state in self.target:
-            for i in range(len(observation)):
-                if a_state[i] == '*':
+            for state_bit, obs_bit in zip(a_state, observation):
+                if state_bit == "*":
                     continue
-                if a_state[i] != observation[i]:
-                    break
+                if state_bit != obs_bit:
+                    return False
             else:
                 return True
         return False
@@ -216,7 +215,7 @@ class PBNTargetMultiEnv(gym.Env):
             reward += 1000
             terminated = True
 
-        reward -= 1 * len(actions)
+        reward -= 10 * len(actions)
 
         truncated = self.n_steps == self.horizon
         return reward, terminated, truncated
@@ -231,14 +230,8 @@ class PBNTargetMultiEnv(gym.Env):
                                                                              replace=False,
                                                                              p=self.probabilities)
 
-        assert self.state_attractor_id != self.target_attractor_id
-
         state_attractor = self.all_attractors[self.state_attractor_id]
         target_attractor = self.all_attractors[self.target_attractor_id]
-
-        # x = random.randint(0, 20)
-        # if x > 19:
-        #     print(self.probabilities)
 
         state = list(random.choice(state_attractor))
         target = list(random.choice(target_attractor))
@@ -431,20 +424,35 @@ class BittnerMulti7(PBNTargetMultiEnv):
             end_episode_on_success,
         )
 
-        # its too big for PBN > 10
-        if self.N < 11:
-            stg = self.graph.genSTG()
-            self.real_attractors = findAttractors(stg)
-            print(f"real attractors are: {self.real_attractors}")
+        # # its too big for PBN > 10
+        # if self.N < 11:
+        #     stg = self.graph.genSTG()
+        #     self.real_attractors = findAttractors(stg)
+        #     print(f"real attractors are: {self.real_attractors}")
 
         self.all_attractors = get_attractors(self)
-        self.probabilities = [1 / len(self.all_attractors)] * len(self.all_attractors)
+        for attractor in self.all_attractors:
+            for state in attractor:
+                stars = 0
+                positions = []
+                for i, s in enumerate(state):
+                    if s == '*':
+                        stars += 1
+                        positions.append(i)
+
+                for p in product([0, 1], repeats=stars):
+                    for i, pos in enumerate(positions):
+                        state[pos] = p[i]
+                        self.attracting_states.add(tuple(state))
+
+
+        self.attractor_count = len(self.all_attractors)
+        self.probabilities = [1 / self.attractor_count] * self.attractor_count
 
         print(self.all_attractors)
 
-        self.target_nodes = sorted(self.includeIDs)
-        self.target_node_values = self.all_attractors[-1]
-        self.target_attractor = len(self.all_attractors) - 1  # last one
+        # self.target_nodes = sorted(self.includeIDs)
+        # self.target_node_values = self.all_attractors[-1]
 
     def statistical_attractors(self):
         with open(f"data/attractors_{self.name}.pkl", 'r+b') as attractors:
@@ -473,16 +481,18 @@ class BittnerMulti7(PBNTargetMultiEnv):
     def is_attracting_state(self, state):
         state = tuple(state)
 
-        for attractor in self.all_attractors:
-            for a_state in attractor:
-                for i in range(len(state)):
-                    if a_state[i] == '*':
-                        continue
-                    if a_state[i] != state[i]:
-                        break
-                else:
-                    return True
-        return False
+        return state in self.attracting_states
+
+        # for attractor in self.all_attractors:
+        #     for a_state in attractor:
+        #         for i in range(len(state)):
+        #             if a_state[i] == '*':
+        #                 continue
+        #             if a_state[i] != state[i]:
+        #                 break
+        #         else:
+        #             return True
+        # return False
 
 
 class BittnerMulti10(BittnerMulti7):

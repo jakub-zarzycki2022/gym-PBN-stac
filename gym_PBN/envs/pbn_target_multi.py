@@ -132,7 +132,7 @@ class PBNTargetMultiEnv(gym.Env):
 
         observation = self.graph.getState()
         self.graph.step(list(self.recent_actions.keys()))
-        while not self.is_attracting_state(observation):
+        while not self.is_attracting_state(observation):  # to liczy się na jednym cpu, i prawdobodobnie powoduje bottleneck w obliczeniach
             to_remove = []
             for action in self.recent_actions:
                 self.recent_actions[action] -= 1
@@ -215,7 +215,7 @@ class PBNTargetMultiEnv(gym.Env):
             reward += 1000
             terminated = True
 
-        reward -= 10 * len(actions)
+        reward -= 1 * len(actions)
 
         truncated = self.n_steps == self.horizon
         return reward, terminated, truncated
@@ -255,7 +255,7 @@ class PBNTargetMultiEnv(gym.Env):
         return (tuple(state), tuple(target)), info
 
     def get_state(self):
-        return np.array(list(self.graph.getState().values()))
+        return np.array(self.graph.getState())
 
     def setTarget(self, target):
         self.target = target

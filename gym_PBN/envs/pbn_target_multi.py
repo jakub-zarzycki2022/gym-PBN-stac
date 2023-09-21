@@ -157,28 +157,29 @@ class PBNTargetMultiEnv(gym.Env):
         pass
 
     def rework_probas(self, episode_len: int):
-        proba_eps = 1 * 1 / self.attractor_count
-        min_prob = 0.01 * 1 / self.attractor_count
-        max_prob = 0.5
-
-        if episode_len < 20:
-            self.probabilities[self.state_attractor_id] -= proba_eps
-            self.probabilities[self.target_attractor_id] -= proba_eps
-            self.probabilities[self.state_attractor_id] = max(self.probabilities[self.state_attractor_id], min_prob)
-            self.probabilities[self.target_attractor_id] = max(self.probabilities[self.target_attractor_id], min_prob)
-
-        if episode_len >= 99:
-            self.probabilities[self.state_attractor_id] += proba_eps
-            self.probabilities[self.target_attractor_id] += proba_eps
-            self.probabilities[self.state_attractor_id] = min(self.probabilities[self.state_attractor_id], max_prob)
-            self.probabilities[self.target_attractor_id] = min(self.probabilities[self.target_attractor_id], max_prob)
-
-        for i in range(len(self.probabilities)):
-            self.probabilities[i] = max(min_prob, self.probabilities[i])
-
-        s = sum(self.probabilities)
-        for i in range(len(self.probabilities)):
-            self.probabilities[i] /= s
+        pass
+        # proba_eps = 1 * 1 / self.attractor_count
+        # min_prob = 0.01 * 1 / self.attractor_count
+        # max_prob = 0.5
+        #
+        # if episode_len < 20:
+        #     self.probabilities[self.state_attractor_id] -= proba_eps
+        #     self.probabilities[self.target_attractor_id] -= proba_eps
+        #     self.probabilities[self.state_attractor_id] = max(self.probabilities[self.state_attractor_id], min_prob)
+        #     self.probabilities[self.target_attractor_id] = max(self.probabilities[self.target_attractor_id], min_prob)
+        #
+        # if episode_len >= 99:
+        #     self.probabilities[self.state_attractor_id] += proba_eps
+        #     self.probabilities[self.target_attractor_id] += proba_eps
+        #     self.probabilities[self.state_attractor_id] = min(self.probabilities[self.state_attractor_id], max_prob)
+        #     self.probabilities[self.target_attractor_id] = min(self.probabilities[self.target_attractor_id], max_prob)
+        #
+        # for i in range(len(self.probabilities)):
+        #     self.probabilities[i] = max(min_prob, self.probabilities[i])
+        #
+        # s = sum(self.probabilities)
+        # for i in range(len(self.probabilities)):
+        #     self.probabilities[i] /= s
 
     def _to_map(self, state):
         getIDs = getattr(self.graph, "getIDs", None)
@@ -234,8 +235,8 @@ class PBNTargetMultiEnv(gym.Env):
                                                                              replace=False,
                                                                              p=self.probabilities)
 
-        state_attractor = self.all_attractors[0]
-        target_attractor = self.all_attractors[-1]
+        state_attractor = self.all_attractors[self.state_attractor_id]
+        target_attractor = self.all_attractors[self.target_attractor_id]
 
         state = list(random.choice(state_attractor))
         target = list(random.choice(target_attractor))

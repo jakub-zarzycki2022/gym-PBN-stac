@@ -92,7 +92,28 @@ register(
 )
 
 register(
+    id="gym-PBN/BittnerMulti-20-v0",
+    entry_point="gym_PBN.envs:BittnerMulti20",
+    nondeterministic=True,
+    max_episode_steps=100,
+)
+
+register(
+    id="gym-PBN/BittnerMulti-25-v0",
+    entry_point="gym_PBN.envs:BittnerMulti25",
+    nondeterministic=True,
+    max_episode_steps=100,
+)
+
+register(
     id="gym-PBN/BittnerMulti-28-v0",
+    entry_point="gym_PBN.envs:BittnerMulti28",
+    nondeterministic=True,
+    max_episode_steps=100,
+)
+
+register(
+    id="gym-PBN/BittnerMulti-30-v0",
     entry_point="gym_PBN.envs:BittnerMulti28",
     nondeterministic=True,
     max_episode_steps=100,

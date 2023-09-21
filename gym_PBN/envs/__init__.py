@@ -18,6 +18,8 @@ from gym_PBN.envs.pbn_target_multi import (
     PBNTargetMultiEnv,
     BittnerMulti7,
     BittnerMulti10,
+    BittnerMulti20,
+    BittnerMulti25,
     BittnerMulti28,
     BittnerMulti30,
     BittnerMulti50,

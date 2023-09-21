@@ -306,8 +306,8 @@ class Graph:
     def step(self, changed_nodes: list = None, i=None):
         oldState = self.getLabeledState()
         i = random.randint(0, len(self.nodes) - 1) if i is None else i
-        while i in changed_nodes:
-            i = random.randint(0, len(self.nodes) - 1)
+        # while i in changed_nodes:
+        #     i = random.randint(0, len(self.nodes) - 1)
         self.nodes[i].step(oldState)
         return self.getState()
 

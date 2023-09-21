@@ -133,16 +133,17 @@ class PBNTargetMultiEnv(gym.Env):
         observation = self.graph.getState()
         self.graph.step(list(self.recent_actions.keys()))
         while not self.is_attracting_state(observation):  # to liczy się na jednym cpu, i prawdobodobnie powoduje bottleneck w obliczeniach
-            to_remove = []
-            for action in self.recent_actions:
-                self.recent_actions[action] -= 1
-                if self.recent_actions[action] == 0:
-                    to_remove.append(action)
-
-            for action in to_remove:
-                self.recent_actions.pop(action)
-
-            observation = self.graph.step(list(self.recent_actions.keys()))
+            # to_remove = []
+            # for action in self.recent_actions:
+            #     self.recent_actions[action] -= 1
+            #     if self.recent_actions[action] == 0:
+            #         to_remove.append(action)
+            #
+            # for action in to_remove:
+            #     self.recent_actions.pop(action)
+            #
+            # observation = self.graph.step(list(self.recent_actions.keys()))
+            observation = self.graph.step()
 
         reward, terminated, truncated = self._get_reward(observation, actions)
         info = {
@@ -152,9 +153,12 @@ class PBNTargetMultiEnv(gym.Env):
 
         return observation, reward, terminated, truncated, info
 
-    def rework_probas(self, episode_len):
-        proba_eps = 0.1 * 1 / self.attractor_count
-        min_prob = 0.1 * 1 / self.attractor_count
+    def rework_probas_epoch(self, len_recap: list):
+        pass
+
+    def rework_probas(self, episode_len: int):
+        proba_eps = 1 * 1 / self.attractor_count
+        min_prob = 0.01 * 1 / self.attractor_count
         max_prob = 0.5
 
         if episode_len < 20:
@@ -230,8 +234,8 @@ class PBNTargetMultiEnv(gym.Env):
                                                                              replace=False,
                                                                              p=self.probabilities)
 
-        state_attractor = self.all_attractors[self.state_attractor_id]
-        target_attractor = self.all_attractors[self.target_attractor_id]
+        state_attractor = self.all_attractors[0]
+        target_attractor = self.all_attractors[-1]
 
         state = list(random.choice(state_attractor))
         target = list(random.choice(target_attractor))
@@ -502,6 +506,16 @@ class BittnerMulti7(PBNTargetMultiEnv):
 class BittnerMulti10(BittnerMulti7):
     N = 10
     NAME = "BittnerMulti-10"
+
+
+class BittnerMulti20(BittnerMulti7):
+    N = 20
+    NAME = "BittnerMulti-20"
+
+
+class BittnerMulti25(BittnerMulti7):
+    N = 25
+    NAME = "BittnerMulti-25"
 
 
 class BittnerMulti30(BittnerMulti7):

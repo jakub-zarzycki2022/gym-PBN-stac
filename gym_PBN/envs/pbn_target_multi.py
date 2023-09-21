@@ -528,6 +528,14 @@ class BittnerMulti50(BittnerMulti7):
     NAME = "BittnerMulti-50"
 
 
+class BittnerMultiGeneral(BittnerMulti7):
+    def __init__(self, N):
+        self.N = N
+        self.NAME = f"BittnerMulti-{N}"
+
+        super().__init__()
+
+
 class BittnerMulti28(BittnerMulti7):
     N = 28
     NAME = "BittnerMulti-28"

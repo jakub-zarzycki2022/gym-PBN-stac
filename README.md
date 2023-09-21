@@ -12,6 +12,12 @@ The point of this library is to provide accessible PB(C)N control MDPs as Gymnas
 
 ## Environments
 
+The most interesting environment in our case is 
+-   `gym-PBN/PBN-target_multi-v0`: The base environment for so-called "target" control.
+It only allows for taking action in attractors, and allows to take multiple actions at once.
+It should be used with BDQ model.
+
+Other environments available are:
 -   `gym-PBN/PBN-v0`: The base Probabilistic Boolean Network environment. Actions involve taking no action, or "flipping" the value of a node at the provided index.
 -   `gym-PBN/PBCN-v0`: The base Probabilistic Boolean Control Network environment. Actions involve setting the control nodes to a certain value.
 -   `gym-PBN/PBN-target-v0`: The base environment for so-called "target" control. This is the SSD-based control objective in our [IEEE TCNS paper](https://ieeexplore.ieee.org/document/9999487), where the goal is to increase the environment's state distribution to a more favourable one w.r.t. the expression of given nodes, and you can do so by perturbing a subset of the nodes (a single node in our case).

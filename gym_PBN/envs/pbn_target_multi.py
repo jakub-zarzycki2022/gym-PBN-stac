@@ -116,7 +116,7 @@ class PBNTargetMultiEnv(gym.Env):
 
         return config
 
-    def step(self, actions, force=False):
+    def step(self, actions, any_state=False):
         if not isinstance(actions, list):
             actions = actions.unique().tolist()
 
@@ -132,7 +132,7 @@ class PBNTargetMultiEnv(gym.Env):
 
         observation = self.graph.getState()
         self.graph.step(list(self.recent_actions.keys()))
-        while not self.is_attracting_state(observation):  # to liczy się na jednym cpu, i prawdobodobnie powoduje bottleneck w obliczeniach
+        while not any_state and not self.is_attracting_state(observation):  # to liczy się na jednym cpu, i prawdobodobnie powoduje bottleneck w obliczeniach
             # to_remove = []
             # for action in self.recent_actions:
             #     self.recent_actions[action] -= 1
@@ -157,29 +157,28 @@ class PBNTargetMultiEnv(gym.Env):
         pass
 
     def rework_probas(self, episode_len: int):
-        pass
-        # proba_eps = 1 * 1 / self.attractor_count
-        # min_prob = 0.01 * 1 / self.attractor_count
-        # max_prob = 0.5
-        #
-        # if episode_len < 20:
-        #     self.probabilities[self.state_attractor_id] -= proba_eps
-        #     self.probabilities[self.target_attractor_id] -= proba_eps
-        #     self.probabilities[self.state_attractor_id] = max(self.probabilities[self.state_attractor_id], min_prob)
-        #     self.probabilities[self.target_attractor_id] = max(self.probabilities[self.target_attractor_id], min_prob)
-        #
-        # if episode_len >= 99:
-        #     self.probabilities[self.state_attractor_id] += proba_eps
-        #     self.probabilities[self.target_attractor_id] += proba_eps
-        #     self.probabilities[self.state_attractor_id] = min(self.probabilities[self.state_attractor_id], max_prob)
-        #     self.probabilities[self.target_attractor_id] = min(self.probabilities[self.target_attractor_id], max_prob)
-        #
-        # for i in range(len(self.probabilities)):
-        #     self.probabilities[i] = max(min_prob, self.probabilities[i])
-        #
-        # s = sum(self.probabilities)
-        # for i in range(len(self.probabilities)):
-        #     self.probabilities[i] /= s
+        proba_eps = 1 * 1 / self.attractor_count
+        min_prob = 0.1 * 1 / self.attractor_count
+        max_prob = 0.5
+
+        if episode_len < 20:
+            self.probabilities[self.state_attractor_id] -= proba_eps
+            self.probabilities[self.target_attractor_id] -= proba_eps
+            self.probabilities[self.state_attractor_id] = max(self.probabilities[self.state_attractor_id], min_prob)
+            self.probabilities[self.target_attractor_id] = max(self.probabilities[self.target_attractor_id], min_prob)
+
+        if episode_len >= 99:
+            self.probabilities[self.state_attractor_id] += proba_eps
+            self.probabilities[self.target_attractor_id] += proba_eps
+            self.probabilities[self.state_attractor_id] = min(self.probabilities[self.state_attractor_id], max_prob)
+            self.probabilities[self.target_attractor_id] = min(self.probabilities[self.target_attractor_id], max_prob)
+
+        for i in range(len(self.probabilities)):
+            self.probabilities[i] = max(min_prob, self.probabilities[i])
+
+        s = sum(self.probabilities)
+        for i in range(len(self.probabilities)):
+            self.probabilities[i] /= s
 
     def _to_map(self, state):
         getIDs = getattr(self.graph, "getIDs", None)
@@ -261,6 +260,9 @@ class PBNTargetMultiEnv(gym.Env):
 
     def get_state(self):
         return np.array(self.graph.getState())
+
+    def set_state(self, state):
+        self.graph.setState(state)
 
     def setTarget(self, target):
         self.target = target
@@ -463,29 +465,23 @@ class BittnerMulti7(PBNTargetMultiEnv):
         # self.target_nodes = sorted(self.includeIDs)
         # self.target_node_values = self.all_attractors[-1]
 
-    def statistical_attractors(self):
-        with open(f"data/attractors_{self.name}.pkl", 'r+b') as attractors:
-            try:
-                statistial_attractors = pkl.load(attractors)
-                print("reusing old attractors")
-            except:
-                print(f"Calculating state statistics for N = {self.N}")
-                print(f"it should take {10000} steps")
-                state_log = defaultdict(int)
+    def statistical_attractors(self, simulations, sim_len):
+            print(f"Calculating state statistics for N = {self.N}")
+            print(f"it should take {10000} steps")
+            state_log = defaultdict(int)
 
-                for i in range(100):
-                    #print(i)
-                    _ = self.reset()
-                    for j in range(1000):
-                        state = tuple(self.render())
-                        state_log[state] += 1
-                        _ = self.step(0, force=True)
+            for i in range(simulations):
+                # print(state_log)
+                initial_state = [random.randint(0, 1) for _ in range(self.N)]
+                self.set_state(initial_state)
+                for j in range(sim_len):
+                    state = tuple(self.render())
+                    state_log[state] += 1
+                    _ = self.step([0], any_state=True)
 
-                states = sorted(state_log.items(), key=lambda kv: kv[1], reverse=True)
+            states = sorted(state_log.items(), key=lambda kv: kv[1], reverse=True)
 
-                statistial_attractors = [node for node, frequency in states[:4]]
-                pkl.dump(statistial_attractors, file=attractors)
-            return statistial_attractors
+            return states
 
     def is_attracting_state(self, state):
         state = tuple(state)

@@ -23,7 +23,6 @@ def parse_attractors(cabean_out):
             if line.startswith(":"):
                 pass
             elif not line:
-                # TODO: sanity check with size
                 num = None
             else:
                 state = parse_state(line.split()[0])
@@ -38,7 +37,7 @@ def parse_attractors(cabean_out):
 
 def get_attractors(env):
     filename = f"data/attractors_{env.name}.pkl"
-    #
+    # pickle seems to work weird for me
     # try:
     #     with open(filename, 'rb') as attractors_file:
     #         return pickle.load(attractors_file)
@@ -80,5 +79,3 @@ Command line: cabean model_from_jinja.ispl
 number of attractors = 4
 time for attractor detection=0
 """
-
-# print(set(parse_attractors(sample_cabean_out).values()))

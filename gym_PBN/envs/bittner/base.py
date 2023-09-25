@@ -221,11 +221,11 @@ class Graph:
     def getNextStates(self, state=None):
         probs = []
         for node in self.nodes:
-            prob = node.getStateProbs(self.getState())
+            prob = node.getStateProbs(self.getLabeledState())
             probs = probs + [prob]
 
         nextStates = defaultdict(float)
-        state = self.getState().values() if state is None else state
+        state = self.getState() if state is None else state
         for i in range(len(state)):
             nextState = list(state)
             prob = probs[i]

@@ -132,7 +132,9 @@ class PBNTargetMultiEnv(gym.Env):
 
         observation = self.graph.getState()
         self.graph.step(list(self.recent_actions.keys()))
-        while not self.is_attracting_state(observation):  # to liczy się na jednym cpu, i prawdobodobnie powoduje bottleneck w obliczeniach
+
+        step_count = 0
+        while not force and not self.is_attracting_state(observation):  # to liczy się na jednym cpu, i prawdobodobnie powoduje bottleneck w obliczeniach
             # to_remove = []
             # for action in self.recent_actions:
             #     self.recent_actions[action] -= 1
@@ -144,6 +146,13 @@ class PBNTargetMultiEnv(gym.Env):
             #
             # observation = self.graph.step(list(self.recent_actions.keys()))
             observation = self.graph.step()
+            step_count += 1
+            if step_count > 1000:
+                print(f"append {observation} to attractor list")
+                self.all_attractors.append([observation])
+                self.attracting_states.add(observation)
+                self.probabilities.append(0)
+                break
 
         reward, terminated, truncated = self._get_reward(observation, actions)
         info = {
@@ -157,8 +166,8 @@ class PBNTargetMultiEnv(gym.Env):
         pass
 
     def rework_probas(self, episode_len: int):
-        proba_eps = 1 * 1 / self.attractor_count
-        min_prob = 0.01 * 1 / self.attractor_count
+        proba_eps = 1 * 1 / len(self.all_attractors)
+        min_prob = 0.01 * 1 / len(self.all_attractors)
         max_prob = 0.5
 
         if episode_len < 20:
@@ -434,24 +443,28 @@ class BittnerMulti7(PBNTargetMultiEnv):
         #     self.real_attractors = findAttractors(stg)
         #     print(f"real attractors are: {self.real_attractors}")
 
-        self.all_attractors = get_attractors(self)
-        for attractor in self.all_attractors:
-            for state in attractor:
-                stars = 0
-                positions = []
-                for i, s in enumerate(state):
-                    if s == '*':
-                        stars += 1
-                        positions.append(i)
+        # if using cabean
+        # self.all_attractors = get_attractors(self)
+        # for attractor in self.all_attractors:
+        #     for state in attractor:
+        #         stars = 0
+        #         positions = []
+        #         for i, s in enumerate(state):
+        #             if s == '*':
+        #                 stars += 1
+        #                 positions.append(i)
+        #
+        #         if stars == 0:
+        #             self.attracting_states.add(tuple(state))
+        #
+        #         for p in product([0, 1], repeat=stars):
+        #             state_mutable = list(state)
+        #             for i, pos in enumerate(positions):
+        #                 state_mutable[pos] = p[i]
+        #                 self.attracting_states.add(tuple(state_mutable))
 
-                if stars == 0:
-                    self.attracting_states.add(tuple(state))
-
-                for p in product([0, 1], repeat=stars):
-                    state_mutable = list(state)
-                    for i, pos in enumerate(positions):
-                        state_mutable[pos] = p[i]
-                        self.attracting_states.add(tuple(state_mutable))
+        # if using statistical_attractors
+        self.all_attractors = [[s] for s in self.statistical_attractors()]
 
 
         self.attractor_count = len(self.all_attractors)
@@ -463,27 +476,24 @@ class BittnerMulti7(PBNTargetMultiEnv):
         # self.target_node_values = self.all_attractors[-1]
 
     def statistical_attractors(self):
-        with open(f"data/attractors_{self.name}.pkl", 'r+b') as attractors:
-            try:
-                statistial_attractors = pkl.load(attractors)
-                print("reusing old attractors")
-            except:
-                print(f"Calculating state statistics for N = {self.N}")
-                print(f"it should take {10000} steps")
-                state_log = defaultdict(int)
+            print(f"Calculating state statistics for N = {self.N}")
+            print(f"it should take {10000} steps")
+            state_log = defaultdict(int)
 
-                for i in range(100):
-                    #print(i)
-                    _ = self.reset()
-                    for j in range(1000):
-                        state = tuple(self.render())
-                        state_log[state] += 1
-                        _ = self.step(0, force=True)
+            self.setTarget([[0] * self.N])
 
-                states = sorted(state_log.items(), key=lambda kv: kv[1], reverse=True)
+            for i in range(1000):
+                s = [random.randint(0, 1) for _ in range(self.N)]
+                self.graph.setState(s)
+                for j in range(1000):
+                    state = tuple(self.render())
+                    state_log[state] += 1
+                    _ = self.step([], force=True)
 
-                statistial_attractors = [node for node, frequency in states[:4]]
-                pkl.dump(statistial_attractors, file=attractors)
+            states = sorted(state_log.items(), key=lambda kv: kv[1], reverse=True)
+
+            statistial_attractors = [node for node, frequency in states[:24]]
+            print(f"got {statistial_attractors}")
             return statistial_attractors
 
     def is_attracting_state(self, state):

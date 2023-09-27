@@ -267,7 +267,7 @@ class PBNTargetEnv(gym.Env):
             self.graph.flipNode(action - 1)
 
         self.graph.step(action)
-        while not force and not self.is_attracting_state(self.graph.getState().values()):
+        while not force and not self.is_attracting_state(self.graph.getState()):
             self.graph.step()
 
         observation = self.graph.getState()
@@ -311,7 +311,7 @@ class PBNTargetEnv(gym.Env):
             Tuple[REWARD, TERMINATED, TRUNCATED]: Tuple of the reward and the environment done status.
         """
         reward, terminated = 0, False
-        observation = tuple(observation.values())
+        observation = tuple(observation)
 
         if self.in_target(observation):
             reward += 20
@@ -352,7 +352,7 @@ class PBNTargetEnv(gym.Env):
         return (tuple(state), tuple(target)), info
 
     def get_state(self):
-        return np.array(list(self.graph.getState().values()))
+        return np.array(list(self.graph.getState()))
 
     def setTarget(self, target):
         self.target = target

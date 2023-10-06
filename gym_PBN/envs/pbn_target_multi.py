@@ -147,7 +147,7 @@ class PBNTargetMultiEnv(gym.Env):
             # observation = self.graph.step(list(self.recent_actions.keys()))
             observation = self.graph.step()
             step_count += 1
-            if step_count > 1000:
+            if step_count > 10_000:
                 print(f"append {observation} to attractor list")
                 self.all_attractors.append([observation])
                 self.attracting_states.add(observation)
@@ -169,6 +169,7 @@ class PBNTargetMultiEnv(gym.Env):
         proba_eps = 1 * 1 / len(self.all_attractors)
         min_prob = 0.01 * 1 / len(self.all_attractors)
         max_prob = 0.5
+        new_attractor = False
 
         if episode_len < 20:
             self.probabilities[self.state_attractor_id] -= proba_eps
@@ -183,11 +184,16 @@ class PBNTargetMultiEnv(gym.Env):
             self.probabilities[self.target_attractor_id] = min(self.probabilities[self.target_attractor_id], max_prob)
 
         for i in range(len(self.probabilities)):
+            if self.probabilities[i] == 0:
+                new_attractor = True
+
             self.probabilities[i] = max(min_prob, self.probabilities[i])
 
         s = sum(self.probabilities)
         for i in range(len(self.probabilities)):
             self.probabilities[i] /= s
+
+        return new_attractor
 
     def _to_map(self, state):
         getIDs = getattr(self.graph, "getIDs", None)

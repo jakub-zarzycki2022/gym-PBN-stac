@@ -477,15 +477,15 @@ class BittnerMulti7(PBNTargetMultiEnv):
 
     def statistical_attractors(self):
             print(f"Calculating state statistics for N = {self.N}")
-            print(f"it should take {100} steps")
+            print(f"it should take {1000} steps")
             state_log = defaultdict(int)
 
             self.setTarget([[0] * self.N])
 
-            for i in range(100):
+            for i in range(1000):
                 s = [random.randint(0, 1) for _ in range(self.N)]
                 self.graph.setState(s)
-                for j in range(100):
+                for j in range(1000):
                     state = tuple(self.render())
                     state_log[state] += 1
                     _ = self.step([], force=True)

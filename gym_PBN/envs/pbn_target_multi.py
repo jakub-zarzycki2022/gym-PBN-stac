@@ -169,7 +169,6 @@ class PBNTargetMultiEnv(gym.Env):
         proba_eps = 1 * 1 / len(self.all_attractors)
         min_prob = 0.01 * 1 / len(self.all_attractors)
         max_prob = 0.5
-        new_attractor = False
 
         if episode_len < 20:
             self.probabilities[self.state_attractor_id] -= proba_eps
@@ -184,16 +183,11 @@ class PBNTargetMultiEnv(gym.Env):
             self.probabilities[self.target_attractor_id] = min(self.probabilities[self.target_attractor_id], max_prob)
 
         for i in range(len(self.probabilities)):
-            if self.probabilities[i] == 0:
-                new_attractor = True
-
             self.probabilities[i] = max(min_prob, self.probabilities[i])
 
         s = sum(self.probabilities)
         for i in range(len(self.probabilities)):
             self.probabilities[i] /= s
-
-        return new_attractor
 
     def _to_map(self, state):
         getIDs = getattr(self.graph, "getIDs", None)
@@ -483,15 +477,15 @@ class BittnerMulti7(PBNTargetMultiEnv):
 
     def statistical_attractors(self):
             print(f"Calculating state statistics for N = {self.N}")
-            print(f"it should take {10000} steps")
+            print(f"it should take {100} steps")
             state_log = defaultdict(int)
 
             self.setTarget([[0] * self.N])
 
-            for i in range(1000):
+            for i in range(100):
                 s = [random.randint(0, 1) for _ in range(self.N)]
                 self.graph.setState(s)
-                for j in range(1000):
+                for j in range(100):
                     state = tuple(self.render())
                     state_log[state] += 1
                     _ = self.step([], force=True)

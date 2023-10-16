@@ -243,8 +243,8 @@ class PBNTargetMultiEnv(gym.Env):
                                                                              replace=False,
                                                                              p=self.probabilities)
 
-        state_attractor = self.all_attractors[0]
-        target_attractor = self.all_attractors[-1]
+        state_attractor = self.all_attractors[self.state_attractor_id]
+        target_attractor = self.all_attractors[self.target_attractor_id]
 
         state = list(random.choice(state_attractor))
         target = list(random.choice(target_attractor))

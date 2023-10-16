@@ -466,7 +466,6 @@ class BittnerMulti7(PBNTargetMultiEnv):
         # if using statistical_attractors
         self.all_attractors = [[s] for s in self.statistical_attractors()]
 
-
         self.attractor_count = len(self.all_attractors)
         self.probabilities = [1 / self.attractor_count] * self.attractor_count
 
@@ -492,7 +491,7 @@ class BittnerMulti7(PBNTargetMultiEnv):
 
             states = sorted(state_log.items(), key=lambda kv: kv[1], reverse=True)
 
-            statistial_attractors = [node for node, frequency in states[:24]]
+            statistial_attractors = [node for node, frequency in states[:10]]
             print(f"got {statistial_attractors}")
             return statistial_attractors
 
@@ -542,6 +541,14 @@ class BittnerMultiGeneral(BittnerMulti7):
     def __init__(self, N):
         self.N = N
         self.NAME = f"BittnerMulti-{N}"
+
+        # special case for consistency with CABEAN
+        if N == 28:
+            self.includeIDs = [234237, 324901, 759948, 25485, 324700, 43129, 266361, 108208, 40764, 130057, 39781, 49665,
+                          39159,
+                          23185, 417218, 31251, 343072, 142076, 128100, 376725, 112500, 241530, 44563, 36950, 812276,
+                          51018,
+                          306013, 418105]
 
         super().__init__()
 

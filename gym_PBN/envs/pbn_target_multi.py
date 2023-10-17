@@ -105,14 +105,6 @@ class PBNTargetMultiEnv(gym.Env):
         Returns:
             dict: The config after it has been checked and initialized to default values if it was empty to begin with.
         """
-        # if config:
-        #     missing_keys = required_keys - set(config.keys())
-        #     if len(missing_keys) > 1:  # If any of the required keys are missing
-        #         raise ValueError(
-        #             f"Invalid {_type} config provided. The following required values are missing: {', '.join(missing_keys)}."
-        #         )
-        # else:
-        #     config = default_values
 
         return config
 
@@ -133,16 +125,6 @@ class PBNTargetMultiEnv(gym.Env):
         observation = self.graph.getState()
         self.graph.step(list(self.recent_actions.keys()))
         while not any_state and not self.is_attracting_state(observation):  # to liczy się na jednym cpu, i prawdobodobnie powoduje bottleneck w obliczeniach
-            # to_remove = []
-            # for action in self.recent_actions:
-            #     self.recent_actions[action] -= 1
-            #     if self.recent_actions[action] == 0:
-            #         to_remove.append(action)
-            #
-            # for action in to_remove:
-            #     self.recent_actions.pop(action)
-            #
-            # observation = self.graph.step(list(self.recent_actions.keys()))
             observation = self.graph.step()
 
         reward, terminated, truncated = self._get_reward(observation, actions)
@@ -152,9 +134,6 @@ class PBNTargetMultiEnv(gym.Env):
         }
 
         return observation, reward, terminated, truncated, info
-
-    def rework_probas_epoch(self, len_recap: list):
-        pass
 
     def rework_probas(self, episode_len: int):
         proba_eps = 1 * 1 / self.attractor_count

@@ -135,19 +135,17 @@ class PBNTargetMultiEnv(gym.Env):
 
         step_count = 0
         while not force and not self.is_attracting_state(observation):  # to liczy się na jednym cpu, i prawdobodobnie powoduje bottleneck w obliczeniach
-            # to_remove = []
-            # for action in self.recent_actions:
-            #     self.recent_actions[action] -= 1
-            #     if self.recent_actions[action] == 0:
-            #         to_remove.append(action)
-            #
-            # for action in to_remove:
-            #     self.recent_actions.pop(action)
-            #
-            # observation = self.graph.step(list(self.recent_actions.keys()))
+            old_observation = observation
             observation = self.graph.step()
-            step_count += 1
-            if step_count > 10_000:
+
+            if observation == old_observation:
+                step_count += 1
+            else:
+                if step_count > 100:
+                    print(f"spent {step_count} in {old_observation}")
+                step_count = 0
+
+            if step_count > 1_000:
                 print(f"append {observation} to attractor list")
                 self.all_attractors.append([observation])
                 self.attracting_states.add(observation)

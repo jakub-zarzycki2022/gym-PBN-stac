@@ -141,8 +141,6 @@ class PBNTargetMultiEnv(gym.Env):
             if observation == old_observation:
                 step_count += 1
             else:
-                if step_count > 100:
-                    print(f"spent {step_count} in {old_observation}")
                 step_count = 0
 
             if step_count > 1_000:
@@ -542,11 +540,10 @@ class BittnerMultiGeneral(BittnerMulti7):
 
         # special case for consistency with CABEAN
         if N == 28:
-            self.includeIDs = [234237, 324901, 759948, 25485, 324700, 43129, 266361, 108208, 40764, 130057, 39781, 49665,
-                          39159,
-                          23185, 417218, 31251, 343072, 142076, 128100, 376725, 112500, 241530, 44563, 36950, 812276,
-                          51018,
-                          306013, 418105]
+            includeIDs = [234237, 324901, 759948, 25485, 324700, 43129, 266361, 108208, 40764, 130057, 39781, 49665, 39159,
+                      23185, 417218, 31251, 343072, 142076, 128100, 376725, 112500, 241530, 44563, 36950, 812276, 51018,
+                      306013, 418105]
+            self.includeIDs = sorted(includeIDs)
 
         super().__init__()
 

@@ -143,7 +143,7 @@ class PBNTargetMultiEnv(gym.Env):
             else:
                 step_count = 0
 
-            if step_count > 1_000:
+            if step_count > 10_000:
                 print(f"append {observation} to attractor list")
                 self.all_attractors.append([observation])
                 self.attracting_states.add(observation)
@@ -158,13 +158,10 @@ class PBNTargetMultiEnv(gym.Env):
 
         return observation, reward, terminated, truncated, info
 
-    def rework_probas_epoch(self, len_recap: list):
-        pass
-
     def rework_probas(self, episode_len: int):
         proba_eps = 1 * 1 / len(self.all_attractors)
         min_prob = 0.01 * 1 / len(self.all_attractors)
-        max_prob = 0.5
+        max_prob = 0.4
 
         if episode_len < 20:
             self.probabilities[self.state_attractor_id] -= proba_eps
@@ -234,10 +231,13 @@ class PBNTargetMultiEnv(gym.Env):
         if seed:
             self._seed(seed)
 
-        self.state_attractor_id, self.target_attractor_id = np.random.choice(range(len(self.all_attractors)),
-                                                                             size=2,
-                                                                             replace=False,
-                                                                             p=self.probabilities)
+        self.target_attractor_id = np.random.choice(range(len(self.all_attractors)),
+                                                    p=self.probabilities)
+
+        self.state_attractor_id = np.random.choice(range(len(self.all_attractors) - 1))
+
+        if self.state_attractor_id >= self.target_attractor_id:
+            self.state_attractor_id += 1
 
         state_attractor = self.all_attractors[self.state_attractor_id]
         target_attractor = self.all_attractors[self.target_attractor_id]
@@ -540,9 +540,9 @@ class BittnerMultiGeneral(BittnerMulti7):
 
         # special case for consistency with CABEAN
         if N == 28:
-            includeIDs = [234237, 324901, 759948, 25485, 324700, 43129, 266361, 108208, 40764, 130057, 39781, 49665, 39159,
-                      23185, 417218, 31251, 343072, 142076, 128100, 376725, 112500, 241530, 44563, 36950, 812276, 51018,
-                      306013, 418105]
+            includeIDs = [234237, 324901, 759948, 25485, 324700, 43129, 266361, 108208, 40764, 130057, 39781, 49665,
+                          39159, 23185, 417218, 31251, 343072, 142076, 128100, 376725, 112500, 241530, 44563, 36950,
+                          812276, 51018, 306013, 418105]
             self.includeIDs = sorted(includeIDs)
 
         super().__init__()

@@ -143,7 +143,7 @@ class PBNTargetMultiEnv(gym.Env):
             else:
                 step_count = 0
 
-            if step_count > 10_000:
+            if step_count > 1_000:
                 print(f"append {observation} to attractor list")
                 self.all_attractors.append([observation])
                 self.attracting_states.add(observation)
@@ -163,13 +163,13 @@ class PBNTargetMultiEnv(gym.Env):
         min_prob = 0.01 * 1 / len(self.all_attractors)
         max_prob = 0.4
 
-        if episode_len < 20:
+        if episode_len < 5:
             self.probabilities[self.state_attractor_id] -= proba_eps
             self.probabilities[self.target_attractor_id] -= proba_eps
             self.probabilities[self.state_attractor_id] = max(self.probabilities[self.state_attractor_id], min_prob)
             self.probabilities[self.target_attractor_id] = max(self.probabilities[self.target_attractor_id], min_prob)
 
-        if episode_len >= 99:
+        if episode_len >= 90:
             self.probabilities[self.state_attractor_id] += proba_eps
             self.probabilities[self.target_attractor_id] += proba_eps
             self.probabilities[self.state_attractor_id] = min(self.probabilities[self.state_attractor_id], max_prob)
@@ -191,11 +191,11 @@ class PBNTargetMultiEnv(gym.Env):
 
     def in_target(self, observation):
         for a_state in self.target:
-            for state_bit, obs_bit in zip(a_state, observation):
-                if state_bit == "*":
+            for i in range(len(a_state)):
+                if a_state[i] == "*":
                     continue
-                if state_bit != obs_bit:
-                    return False
+                if a_state[i] != observation[i]:
+                    break
             else:
                 return True
         return False
@@ -440,27 +440,27 @@ class BittnerMulti7(PBNTargetMultiEnv):
         #     print(f"real attractors are: {self.real_attractors}")
 
         # if using cabean
-        # self.all_attractors = get_attractors(self)
-        # for attractor in self.all_attractors:
-        #     for state in attractor:
-        #         stars = 0
-        #         positions = []
-        #         for i, s in enumerate(state):
-        #             if s == '*':
-        #                 stars += 1
-        #                 positions.append(i)
-        #
-        #         if stars == 0:
-        #             self.attracting_states.add(tuple(state))
-        #
-        #         for p in product([0, 1], repeat=stars):
-        #             state_mutable = list(state)
-        #             for i, pos in enumerate(positions):
-        #                 state_mutable[pos] = p[i]
-        #                 self.attracting_states.add(tuple(state_mutable))
+        self.all_attractors = get_attractors(self)
+        for attractor in self.all_attractors:
+            for state in attractor:
+                stars = 0
+                positions = []
+                for i, s in enumerate(state):
+                    if s == '*':
+                        stars += 1
+                        positions.append(i)
+
+                if stars == 0:
+                    self.attracting_states.add(tuple(state))
+
+                for p in product([0, 1], repeat=stars):
+                    state_mutable = list(state)
+                    for i, pos in enumerate(positions):
+                        state_mutable[pos] = p[i]
+                        self.attracting_states.add(tuple(state_mutable))
 
         # if using statistical_attractors
-        self.all_attractors = [[s] for s in self.statistical_attractors()]
+        # self.all_attractors = [[s] for s in self.statistical_attractors()]
 
         self.attractor_count = len(self.all_attractors)
         self.probabilities = [1 / self.attractor_count] * self.attractor_count

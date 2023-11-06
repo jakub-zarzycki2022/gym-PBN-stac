@@ -57,6 +57,7 @@ def spawn(
     include_ids,
     bin_method,
     n_predictors=5,
+    k=2,
     predictor_sets_path=Path(__file__).parent / "data",
 ):
     gene_data, weight_ids = extract_gene_data(file)
@@ -75,7 +76,8 @@ def spawn(
     predictor_sets = gen.generate_predictor_sets(
         gene_data,
         n_predictors=n_predictors,
-        savepath=f"{predictor_sets_path}/predictor_sets_{len(include_ids)}_{n_predictors}_{bin_method}.pkl",
+        k=k,
+        savepath=f"{predictor_sets_path}/predictor_sets_{len(include_ids)}_{n_predictors}_{k}_{bin_method}.pkl",
     )
 
     nodes = []

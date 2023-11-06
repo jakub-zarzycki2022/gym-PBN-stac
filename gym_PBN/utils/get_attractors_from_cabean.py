@@ -23,7 +23,6 @@ def parse_attractors(cabean_out):
             if line.startswith(":"):
                 pass
             elif not line:
-                # TODO: sanity check with size
                 num = None
             else:
                 state = parse_state(line.split()[0])

@@ -134,21 +134,40 @@ class PBNTargetMultiEnv(gym.Env):
         self.graph.step(list(self.recent_actions.keys()))
 
         step_count = 0
+        returns_count = 0
+        history = defaultdict(int)
         while not force and not self.is_attracting_state(observation):  # to liczy się na jednym cpu, i prawdobodobnie powoduje bottleneck w obliczeniach
             old_observation = observation
             observation = self.graph.step()
 
             if observation == old_observation:
-                step_count += 1
+                returns_count += 1
             else:
-                step_count = 0
+                returns_count = 0
 
-            if step_count > 1_000:
+            if returns_count > 1_000:
                 print(f"append {observation} to attractor list")
                 self.all_attractors.append([observation])
                 self.attracting_states.add(observation)
                 self.probabilities.append(0)
                 break
+
+            step_count += 1
+            history[observation] += 1
+
+            if step_count > 10_000:
+                states = sorted(history.items(), key=lambda kv: kv[1], reverse=True)
+                new_attractors = [node for node, frequency in states if frequency > 1500]
+
+                print(len(new_attractors))
+                for s in new_attractors:
+                    print(s, history[s])
+                    self.all_attractors.append([s])
+                    self.attracting_states.add(s)
+                    self.probabilities.append(0)
+
+                step_count = 0
+
 
         reward, terminated, truncated = self._get_reward(observation, actions)
         info = {
@@ -440,27 +459,27 @@ class BittnerMulti7(PBNTargetMultiEnv):
         #     print(f"real attractors are: {self.real_attractors}")
 
         # if using cabean
-        self.all_attractors = get_attractors(self)
-        for attractor in self.all_attractors:
-            for state in attractor:
-                stars = 0
-                positions = []
-                for i, s in enumerate(state):
-                    if s == '*':
-                        stars += 1
-                        positions.append(i)
-
-                if stars == 0:
-                    self.attracting_states.add(tuple(state))
-
-                for p in product([0, 1], repeat=stars):
-                    state_mutable = list(state)
-                    for i, pos in enumerate(positions):
-                        state_mutable[pos] = p[i]
-                        self.attracting_states.add(tuple(state_mutable))
+        # self.all_attractors = get_attractors(self)
+        # for attractor in self.all_attractors:
+        #     for state in attractor:
+        #         stars = 0
+        #         positions = []
+        #         for i, s in enumerate(state):
+        #             if s == '*':
+        #                 stars += 1
+        #                 positions.append(i)
+        #
+        #         if stars == 0:
+        #             self.attracting_states.add(tuple(state))
+        #
+        #         for p in product([0, 1], repeat=stars):
+        #             state_mutable = list(state)
+        #             for i, pos in enumerate(positions):
+        #                 state_mutable[pos] = p[i]
+        #                 self.attracting_states.add(tuple(state_mutable))
 
         # if using statistical_attractors
-        # self.all_attractors = [[s] for s in self.statistical_attractors()]
+        self.all_attractors = [[s] for s in self.statistical_attractors()]
 
         self.attractor_count = len(self.all_attractors)
         self.probabilities = [1 / self.attractor_count] * self.attractor_count
@@ -472,22 +491,33 @@ class BittnerMulti7(PBNTargetMultiEnv):
 
     def statistical_attractors(self):
             print(f"Calculating state statistics for N = {self.N}")
-            print(f"it should take {1000} steps")
+            print(f"it should take {10**4} steps")
             state_log = defaultdict(int)
 
             self.setTarget([[0] * self.N])
 
-            for i in range(1000):
+            steps = 1000
+            simulations = 10**4
+            for i in range(simulations):
+                if i % 10**3 == 0:
+                    print(i)
                 s = [random.randint(0, 1) for _ in range(self.N)]
                 self.graph.setState(s)
-                for j in range(1000):
+                for j in range(steps):
                     state = tuple(self.render())
                     state_log[state] += 1
                     _ = self.step([], force=True)
 
             states = sorted(state_log.items(), key=lambda kv: kv[1], reverse=True)
 
-            statistial_attractors = [node for node, frequency in states[:10]]
+            statistial_attractors = [node for node, frequency in states if frequency > 0.15 * steps * simulations]
+
+            if len(statistial_attractors) < 10:
+                statistial_attractors = [node for node, frequency in states if frequency > 1000]
+
+            if len(statistial_attractors) < 10:
+                statistial_attractors = [node for node, frequency in states[:10]]
+
             print(f"got {statistial_attractors}")
             return statistial_attractors
 

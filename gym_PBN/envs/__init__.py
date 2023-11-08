@@ -25,3 +25,5 @@ from gym_PBN.envs.pbn_target_multi import (
     BittnerMulti50,
     BittnerMultiGeneral,
 )
+
+from gym_PBN.envs.pbn_gtex import PBNGTEx

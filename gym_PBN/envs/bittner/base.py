@@ -29,7 +29,7 @@ class Node:
 
     def add_predictors(self, predictors):
         IDstoPrint = []
-        for COD, A, inputIDs in predictors.T:
+        for COD, A, inputIDs in predictors:
             if type(COD) == type(None):
                 pass
             else:

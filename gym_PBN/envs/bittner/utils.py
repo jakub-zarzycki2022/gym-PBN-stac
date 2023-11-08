@@ -86,7 +86,7 @@ def spawn(
         global_index = np.where(gene_data.index == _id)[0][0]
 
         node = base.Node(i, global_index, data["Name"], _id)
-        node.add_predictors(predictor_sets[i])
+        node.add_predictors(predictor_sets[i].T)
         nodes.append(node)
 
     graph.add_nodes(nodes)

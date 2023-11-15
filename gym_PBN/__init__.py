@@ -1,6 +1,6 @@
 from gymnasium import register
 
-register(id="gym-PBN/PBN-v0", entry_point="gym_PBN.envs:PBNEnv")
+register(id="gym-PBN/PBNEnv-v0", entry_point="gym_PBN.envs:PBNEnv")
 
 register(id="gym-PBN/PBN-target-v0", entry_point="gym_PBN.envs:PBNTargetEnv")
 

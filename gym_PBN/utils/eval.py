@@ -7,7 +7,7 @@ from typing import Iterable
 import numpy as np
 import pandas as pd
 import plotly.express as px
-from gym_PBN.envs.pbn_env import PBNEnv
+from gym_PBN.envs.dep_pbn_env import PBNEnv
 from gym_PBN.envs.pbn_target import PBNTargetEnv
 from tqdm import tqdm
 from tqdm.contrib.concurrent import process_map

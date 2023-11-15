@@ -14,6 +14,7 @@ import numpy as np
 from scipy.special import smirnov
 from scipy.stats import logistic
 
+
 class Node:
     def __init__(self, index, bittnerIndex, name, ID, LUTflag=False):
         self.index = index
@@ -41,7 +42,7 @@ class Node:
                     currCOD = prevCOD + COD
                     self.predictors += [(inputIDs, A, currCOD)]
                     for inID in list(inputIDs):
-                        if not inID in IDstoPrint:
+                        if inID not in IDstoPrint:
                             IDstoPrint = IDstoPrint + [inID]
 
     def addInputNode(self, inputNode):

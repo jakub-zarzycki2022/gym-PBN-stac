@@ -31,6 +31,7 @@ def logic_funcs_to_PBN_data(nodes: List[str], node_functions: List[Tuple[str, in
                 }
                 value = int(logic_eval.evaluate(function))
                 if value == 1:
+                    # truth_thable[state] = P(node == 1 | state)
                     truth_table[state] += prob
 
         control = sum(input_mask) == 0

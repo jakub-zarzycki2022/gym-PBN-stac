@@ -58,14 +58,16 @@ def get_model(env):
 
         for predictor in predictors:
             IDs, A, _ = predictor
+            num_genes = len(IDs)
+
             # matrix of # of len(state) + 1 x # of states
-            truth_table = np.zeros((3 + 1 + 1, 2 ** (3 + 1)))
-            for j, state in enumerate(product([0, 1], repeat=3+1)):
-                x = np.ones(3 + 1)
+            truth_table = np.zeros((num_genes + 1 + 1, 2 ** (num_genes + 1)))
+            for j, state in enumerate(product([0, 1], repeat=num_genes+1)):
+                x = np.ones(num_genes + 1)
                 for i in range(len(state)):
-                    x[i] = state[i]
+                    x[i] = 2 * state[i] - 1
                     truth_table[i][j] = state[i]
-                truth_table[3+1][j] = 1 if logistic.cdf(np.dot(state, A)) >= .5 else 0
+                truth_table[num_genes+1][j] = 1 if np.dot(x, A) >= 0 else 0
 
             truth_tables[node.ID].append((IDs, truth_table))
 
@@ -78,8 +80,14 @@ def get_model(env):
             minterms = [list(x)[:-1] for x in tt.T if list(x)[-1]]
             pred_ids = list(IDs)
             pred_ids.append(gen)
-            sym = symbols(",".join([str(x) for x in pred_ids]))
+
+            if len(pred_ids) == 1:
+                sym = symbols(pred_ids)
+            else:
+                sym = symbols(",".join([str(x) for x in pred_ids]))
+
             fun = str(SOPform(sym, minterms, []))
+            print(fun)
             if fun == 'True':
                 fun = f'{gen} | ~{gen}'
             lf.append((translate(fun)))

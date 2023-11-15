@@ -8,7 +8,7 @@ from gym_PBN.types import GYM_STEP_RETURN, REWARD, STATE, TERMINATED, TRUNCATED
 from gym_PBN.utils import booleanize
 
 from .common.pbcn import PBCN
-from .pbn_env import PBNEnv
+from .dep_pbn_env import PBNEnv
 
 
 class PBCNEnv(PBNEnv):

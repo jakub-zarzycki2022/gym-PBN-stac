@@ -5,7 +5,7 @@ import numpy as np
 from gymnasium import spaces
 
 from gym_PBN.envs.pbcn_env import PBCNEnv
-from gym_PBN.envs.pbn_env import PBNEnv
+from gym_PBN.envs.dep_pbn_env import PBNEnv
 from gym_PBN.types import GYM_STEP_RETURN
 from gym_PBN.utils import booleanize
 

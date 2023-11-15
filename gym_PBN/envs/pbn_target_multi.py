@@ -432,6 +432,7 @@ class BittnerMulti7(PBNTargetMultiEnv):
             include_ids=self.includeIDs,
             bin_method="median",
             n_predictors=3,
+            k=3,
             predictor_sets_path=self.predictor_sets_path,
         )
 
@@ -451,12 +452,6 @@ class BittnerMulti7(PBNTargetMultiEnv):
             reward_config,
             end_episode_on_success,
         )
-
-        # # its too big for PBN > 10
-        # if self.N < 11:
-        #     stg = self.graph.genSTG()
-        #     self.real_attractors = findAttractors(stg)
-        #     print(f"real attractors are: {self.real_attractors}")
 
         # if using cabean
         # self.all_attractors = get_attractors(self)
@@ -511,12 +506,15 @@ class BittnerMulti7(PBNTargetMultiEnv):
             states = sorted(state_log.items(), key=lambda kv: kv[1], reverse=True)
 
             statistial_attractors = [node for node, frequency in states if frequency > 0.15 * steps * simulations]
+            print(f"choosing {len(statistial_attractors)} out of {len(states)}")
 
             if len(statistial_attractors) < 10:
                 statistial_attractors = [node for node, frequency in states if frequency > 1000]
+                print(f"recalculating. Got {len(statistial_attractors)}")
 
             if len(statistial_attractors) < 10:
                 statistial_attractors = [node for node, frequency in states[:10]]
+                print(f"recalculating. Got {len(statistial_attractors)}")
 
             print(f"got {statistial_attractors}")
             return statistial_attractors

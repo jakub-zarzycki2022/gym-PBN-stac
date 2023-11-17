@@ -342,6 +342,64 @@ class PBNTargetMultiEnv(gym.Env):
         """Close out the environment and make sure everything is garbage collected."""
         del self.graph
 
+    def statistical_attractors(self):
+            state_log = defaultdict(int)
+
+            self.setTarget([[0] * self.N])
+
+            steps = 1000
+            simulations = 10**4
+
+            print(f"Calculating state statistics for N = {self.N}")
+            print(f"running {simulations} simulations {steps} steps each")
+
+            for i in range(simulations):
+                if i % 10**3 == 0:
+                    print(i)
+                s = [random.randint(0, 1) for _ in range(self.N)]
+                self.graph.setState(s)
+                for j in range(steps):
+                    state = tuple(self.render())
+                    state_log[state] += 1
+                    _ = self.step([], force=True)
+
+            states = sorted(state_log.items(), key=lambda kv: kv[1], reverse=True)
+
+            statistial_attractors = [node for node, frequency in states if frequency > 0.15 * steps * simulations]
+            print(f"(15%) choosing {len(statistial_attractors)} out of {len(states)}")
+
+            if len(statistial_attractors) < 2:
+                statistial_attractors = [node for node, frequency in states if frequency > 0.1 * steps * simulations]
+                frequencies = sorted([frequency for node, frequency in states], reverse=True)[:10]
+                print(f"(10%) recalculating using {frequencies}. Got {len(statistial_attractors)}")
+
+            if len(statistial_attractors) < 2:
+                statistial_attractors = [node for node, frequency in states if frequency > 0.1 * steps * simulations]
+                print(f"(5%) recalculating. Got {len(statistial_attractors)}")
+
+            if len(statistial_attractors) < 2:
+                statistial_attractors = [node for node, frequency in states[:10]]
+                print(f"recalculating. Got {len(statistial_attractors)}")
+
+            print(f"got {statistial_attractors}")
+            return statistial_attractors
+
+    def is_attracting_state(self, state):
+        state = tuple(state)
+
+        return state in self.attracting_states
+
+        # for attractor in self.all_attractors:
+        #     for a_state in attractor:
+        #         for i in range(len(state)):
+        #             if a_state[i] == '*':
+        #                 continue
+        #             if a_state[i] != state[i]:
+        #                 break
+        #         else:
+        #             return True
+        # return False
+
 
 class BittnerMulti70(PBNTargetMultiEnv):
     predictor_sets_path = Path(__file__).parent / "bittner" / "data"
@@ -483,58 +541,6 @@ class BittnerMulti7(PBNTargetMultiEnv):
 
         # self.target_nodes = sorted(self.includeIDs)
         # self.target_node_values = self.all_attractors[-1]
-
-    def statistical_attractors(self):
-            print(f"Calculating state statistics for N = {self.N}")
-            print(f"it should take {10**4} steps")
-            state_log = defaultdict(int)
-
-            self.setTarget([[0] * self.N])
-
-            steps = 1000
-            simulations = 10**4
-            for i in range(simulations):
-                if i % 10**3 == 0:
-                    print(i)
-                s = [random.randint(0, 1) for _ in range(self.N)]
-                self.graph.setState(s)
-                for j in range(steps):
-                    state = tuple(self.render())
-                    state_log[state] += 1
-                    _ = self.step([], force=True)
-
-            states = sorted(state_log.items(), key=lambda kv: kv[1], reverse=True)
-
-            statistial_attractors = [node for node, frequency in states if frequency > 0.15 * steps * simulations]
-            print(f"choosing {len(statistial_attractors)} out of {len(states)}")
-
-            if len(statistial_attractors) < 10:
-                statistial_attractors = [node for node, frequency in states if frequency > 1000]
-                print(f"recalculating. Got {len(statistial_attractors)}")
-
-            if len(statistial_attractors) < 10:
-                statistial_attractors = [node for node, frequency in states[:10]]
-                print(f"recalculating. Got {len(statistial_attractors)}")
-
-            print(f"got {statistial_attractors}")
-            return statistial_attractors
-
-    def is_attracting_state(self, state):
-        state = tuple(state)
-
-        return state in self.attracting_states
-
-        # for attractor in self.all_attractors:
-        #     for a_state in attractor:
-        #         for i in range(len(state)):
-        #             if a_state[i] == '*':
-        #                 continue
-        #             if a_state[i] != state[i]:
-        #                 break
-        #         else:
-        #             return True
-        # return False
-
 
 class BittnerMulti10(BittnerMulti7):
     N = 10

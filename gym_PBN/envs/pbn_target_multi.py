@@ -233,11 +233,11 @@ class PBNTargetMultiEnv(gym.Env):
         Returns:
             Tuple[REWARD, TERMINATED, TRUNCATED]: Tuple of the reward and the environment done status.
         """
-        reward, terminated = 0, False
+        reward, terminated = -100, False
         observation = tuple(observation)
 
         if self.in_target(observation):
-            reward += 1000
+            reward += 100
             terminated = True
 
         reward -= 1 * len(actions)
@@ -343,46 +343,46 @@ class PBNTargetMultiEnv(gym.Env):
         del self.graph
 
     def statistical_attractors(self):
-            state_log = defaultdict(int)
+        state_log = defaultdict(int)
 
-            self.setTarget([[0] * self.N])
+        self.setTarget([[0] * self.N])
 
-            steps = 1000
-            simulations = 10**4
+        steps = 1000
+        simulations = 10**4
 
-            print(f"Calculating state statistics for N = {self.N}")
-            print(f"running {simulations} simulations {steps} steps each")
+        print(f"Calculating state statistics for N = {self.N}")
+        print(f"running {simulations} simulations {steps} steps each")
 
-            for i in range(simulations):
-                if i % 10**3 == 0:
-                    print(i)
-                s = [random.randint(0, 1) for _ in range(self.N)]
-                self.graph.setState(s)
-                for j in range(steps):
-                    state = tuple(self.render())
-                    state_log[state] += 1
-                    _ = self.step([], force=True)
+        for i in range(simulations):
+            if i % 10**3 == 0:
+                print(i)
+            s = [random.randint(0, 1) for _ in range(self.N)]
+            self.graph.setState(s)
+            for j in range(steps):
+                state = tuple(self.render())
+                state_log[state] += 1
+                _ = self.step([], force=True)
 
-            states = sorted(state_log.items(), key=lambda kv: kv[1], reverse=True)
+        states = sorted(state_log.items(), key=lambda kv: kv[1], reverse=True)
 
-            statistial_attractors = [node for node, frequency in states if frequency > 0.15 * steps * simulations]
-            print(f"(15%) choosing {len(statistial_attractors)} out of {len(states)}")
+        statistial_attractors = [node for node, frequency in states if frequency > 0.15 * steps * simulations]
+        print(f"(15%) choosing {len(statistial_attractors)} out of {len(states)}")
 
-            if len(statistial_attractors) < 2:
-                statistial_attractors = [node for node, frequency in states if frequency > 0.1 * steps * simulations]
-                frequencies = sorted([frequency for node, frequency in states], reverse=True)[:10]
-                print(f"(10%) recalculating using {frequencies}. Got {len(statistial_attractors)}")
+        if len(statistial_attractors) < 2:
+            statistial_attractors = [node for node, frequency in states if frequency > 0.1 * steps * simulations]
+            frequencies = sorted([frequency for node, frequency in states], reverse=True)[:10]
+            print(f"(10%) recalculating using {frequencies}. Got {len(statistial_attractors)}")
 
-            if len(statistial_attractors) < 2:
-                statistial_attractors = [node for node, frequency in states if frequency > 0.1 * steps * simulations]
-                print(f"(5%) recalculating. Got {len(statistial_attractors)}")
+        if len(statistial_attractors) < 2:
+            statistial_attractors = [node for node, frequency in states if frequency > 0.05 * steps * simulations]
+            print(f"(5%) recalculating. Got {len(statistial_attractors)}")
 
-            if len(statistial_attractors) < 2:
-                statistial_attractors = [node for node, frequency in states[:10]]
-                print(f"recalculating. Got {len(statistial_attractors)}")
+        if len(statistial_attractors) < 2:
+            statistial_attractors = [node for node, frequency in states[:10]]
+            print(f"recalculating. Got {len(statistial_attractors)}")
 
-            print(f"got {statistial_attractors}")
-            return statistial_attractors
+        print(f"got {statistial_attractors}")
+        return statistial_attractors
 
     def is_attracting_state(self, state):
         state = tuple(state)
@@ -465,7 +465,7 @@ class BittnerMulti7(PBNTargetMultiEnv):
     genedata = predictor_sets_path / "genedata.xls"
 
     includeIDs = [234237, 324901, 759948, 25485, 266361, 108208, 130057]
-    includeIDs = sorted(includeIDs)
+
 
     N = 7
     NAME = "Bittner-7"
@@ -483,6 +483,8 @@ class BittnerMulti7(PBNTargetMultiEnv):
             name = self.NAME
 
         print(f"initing {name}")
+
+        self.includeIDs = sorted(self.includeIDs)
 
         graph = utils.spawn(
             file=self.genedata,

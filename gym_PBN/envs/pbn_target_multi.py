@@ -344,7 +344,7 @@ class PBNTargetMultiEnv(gym.Env):
         self.setTarget([[0] * self.N])
 
         steps = 1000
-        simulations = 10**4
+        simulations = 10**1
         min_attractors = 4
 
         print(f"Calculating state statistics for N = {self.N}")
@@ -384,7 +384,7 @@ class PBNTargetMultiEnv(gym.Env):
     def is_attracting_state(self, state):
         state = tuple(state)
 
-        return state in self.attracting_states
+        return [state] in self.all_attractors
 
         # for attractor in self.all_attractors:
         #     for a_state in attractor:
@@ -538,6 +538,9 @@ class BittnerMulti7(PBNTargetMultiEnv):
         #                        [(1, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0)]]
 
         self.all_attractors = [[s] for s in self.statistical_attractors()]
+        
+        for a in self.all_attractors:
+            self.attracting_states.add(a[0])
 
         self.attractor_count = len(self.all_attractors)
         self.probabilities = [1 / self.attractor_count] * self.attractor_count

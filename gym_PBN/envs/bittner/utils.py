@@ -57,7 +57,7 @@ def spawn(
     include_ids,
     bin_method,
     n_predictors=5,
-    k=2,
+    k=3,
     predictor_sets_path=Path(__file__).parent / "data",
 ):
     gene_data, weight_ids = extract_gene_data(file)

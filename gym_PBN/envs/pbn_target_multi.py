@@ -37,20 +37,16 @@ class PBNTargetMultiEnv(gym.Env):
         render_mode: str = None,
         render_no_cache: bool = False,
         name: str = None,
-        reward_config: dict = None,
         end_episode_on_success: bool = False,
+        horizon: int = 100,
     ):
         self.target = None
         self.graph = graph
 
         self.end_episode_on_success = end_episode_on_success
 
-        if "horizon" in goal_config.keys():
-            print("setting from config")
-            self.horizon = goal_config["horizon"]
-        else:
-            print("setting 100")
-            self.horizon = 100
+        print(f"setting {horizon}")
+        self.horizon = horizon
 
         # Gym
         self.observation_space = MultiBinary(self.graph.N)
@@ -349,6 +345,7 @@ class PBNTargetMultiEnv(gym.Env):
 
         steps = 1000
         simulations = 10**4
+        min_attractors = 10
 
         print(f"Calculating state statistics for N = {self.N}")
         print(f"running {simulations} simulations {steps} steps each")
@@ -368,17 +365,17 @@ class PBNTargetMultiEnv(gym.Env):
         statistial_attractors = [node for node, frequency in states if frequency > 0.15 * steps * simulations]
         print(f"(15%) choosing {len(statistial_attractors)} out of {len(states)}")
 
-        if len(statistial_attractors) < 2:
+        if len(statistial_attractors) < min_attractors:
             statistial_attractors = [node for node, frequency in states if frequency > 0.1 * steps * simulations]
             frequencies = sorted([frequency for node, frequency in states], reverse=True)[:10]
             print(f"(10%) recalculating using {frequencies}. Got {len(statistial_attractors)}")
 
-        if len(statistial_attractors) < 2:
+        if len(statistial_attractors) < min_attractors:
             statistial_attractors = [node for node, frequency in states if frequency > 0.05 * steps * simulations]
             print(f"(5%) recalculating. Got {len(statistial_attractors)}")
 
-        if len(statistial_attractors) < 2:
-            statistial_attractors = [node for node, frequency in states[:10]]
+        if len(statistial_attractors) < min_attractors:
+            statistial_attractors = [node for node, frequency in states[:min_attractors]]
             print(f"recalculating. Got {len(statistial_attractors)}")
 
         print(f"got {statistial_attractors}")
@@ -509,9 +506,11 @@ class BittnerMulti7(PBNTargetMultiEnv):
             render_mode,
             render_no_cache,
             name,
-            reward_config,
             end_episode_on_success,
         )
+
+        self.horizon = horizon
+        print("Single episode horizon is ", self.horizon)
 
         # if using cabean
         # self.all_attractors = get_attractors(self)
@@ -534,6 +533,8 @@ class BittnerMulti7(PBNTargetMultiEnv):
         #                 self.attracting_states.add(tuple(state_mutable))
 
         # if using statistical_attractors
+        # self.all_attractors = [[(1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1)], [(1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 0)], [(1, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0)], [(1, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0)], [(1, 0, 1, 1, 1, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0)], [(1, 0, 1, 1, 1, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1)], [(1, 1, 1, 0, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1)], [(1, 1, 1, 0, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1)], [(1, 1, 1, 0, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1)], [(1, 1, 1, 0, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1)]]
+
         self.all_attractors = [[s] for s in self.statistical_attractors()]
 
         self.attractor_count = len(self.all_attractors)
@@ -570,7 +571,7 @@ class BittnerMulti50(BittnerMulti7):
 
 
 class BittnerMultiGeneral(BittnerMulti7):
-    def __init__(self, N):
+    def __init__(self, N, horizon=100):
         self.N = N
         self.NAME = f"BittnerMulti-{N}"
 
@@ -581,7 +582,7 @@ class BittnerMultiGeneral(BittnerMulti7):
                           812276, 51018, 306013, 418105]
             self.includeIDs = sorted(includeIDs)
 
-        super().__init__()
+        super().__init__(horizon=horizon)
 
 
 class BittnerMulti28(BittnerMulti7):
@@ -593,7 +594,6 @@ class BittnerMulti28(BittnerMulti7):
             render_no_cache: bool = False,
             name: str = "Bittner-28",
             horizon: int = 100,
-            reward_config: dict = None,
             end_episode_on_success: bool = False,
     ):
         includeIDs = [234237, 324901, 759948, 25485, 324700, 43129, 266361, 108208, 40764, 130057, 39781, 49665, 39159,

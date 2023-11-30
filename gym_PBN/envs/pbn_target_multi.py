@@ -229,14 +229,14 @@ class PBNTargetMultiEnv(gym.Env):
         Returns:
             Tuple[REWARD, TERMINATED, TRUNCATED]: Tuple of the reward and the environment done status.
         """
-        reward, terminated = -100, False
+        reward, terminated = 3, False
         observation = tuple(observation)
 
-        if self.in_target(observation):
-            reward += 100
-            terminated = True
-
         reward -= 1 * len(actions)
+
+        if self.in_target(observation):
+            reward += 5
+            terminated = True
 
         truncated = self.n_steps == self.horizon
         return reward, terminated, truncated
@@ -533,11 +533,13 @@ class BittnerMulti7(PBNTargetMultiEnv):
         #                 self.attracting_states.add(tuple(state_mutable))
 
         # if using statistical_attractors
-        # self.all_attractors = [[(1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1)],
-        #                        [(1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 0)],
-        #                        [(1, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0)]]
-
-        self.all_attractors = [[s] for s in self.statistical_attractors()]
+        remember = False
+        if remember:
+            self.all_attractors = [[(1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1)],
+                                   [(1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 0)],
+                                   [(1, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0)]]
+        else:
+            self.all_attractors = [[s] for s in self.statistical_attractors()]
 
         for a in self.all_attractors:
             self.attracting_states.add(a[0])
@@ -549,6 +551,7 @@ class BittnerMulti7(PBNTargetMultiEnv):
 
         # self.target_nodes = sorted(self.includeIDs)
         # self.target_node_values = self.all_attractors[-1]
+
 
 class BittnerMulti10(BittnerMulti7):
     N = 10

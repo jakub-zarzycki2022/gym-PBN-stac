@@ -42,6 +42,7 @@ class PBNEnv(PBNTargetMultiEnv):
         )
 
         self.all_attractors = [[s] for s in self.statistical_attractors()]
+        self.attracting_states.update([s[0] for s in self.all_attractors])
 
         self.attractor_count = len(self.all_attractors)
         self.probabilities = [1 / self.attractor_count] * self.attractor_count

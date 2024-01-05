@@ -114,6 +114,7 @@ class PBNTargetMultiEnv(gym.Env):
 
     def step(self, actions, force=False):
         if not isinstance(actions, list):
+            print(actions)
             actions = actions.unique().tolist()
 
         self.n_steps += 1
@@ -146,6 +147,7 @@ class PBNTargetMultiEnv(gym.Env):
                 self.all_attractors.append([observation])
                 self.attracting_states.add(observation)
                 self.probabilities.append(0)
+                self.rework_probas()
                 break
 
             step_count += 1
@@ -162,8 +164,8 @@ class PBNTargetMultiEnv(gym.Env):
                     self.attracting_states.add(s)
                     self.probabilities.append(0)
 
+                self.rework_probas()
                 step_count = 0
-
 
         reward, terminated, truncated = self._get_reward(observation, actions)
         info = {
@@ -173,29 +175,8 @@ class PBNTargetMultiEnv(gym.Env):
 
         return observation, reward, terminated, truncated, info
 
-    def rework_probas(self, episode_len: int):
-        proba_eps = 1 * 1 / len(self.all_attractors)
-        min_prob = 0.01 * 1 / len(self.all_attractors)
-        max_prob = 0.4
-
-        if episode_len < 5:
-            self.probabilities[self.state_attractor_id] -= proba_eps
-            self.probabilities[self.target_attractor_id] -= proba_eps
-            self.probabilities[self.state_attractor_id] = max(self.probabilities[self.state_attractor_id], min_prob)
-            self.probabilities[self.target_attractor_id] = max(self.probabilities[self.target_attractor_id], min_prob)
-
-        if episode_len >= 90:
-            self.probabilities[self.state_attractor_id] += proba_eps
-            self.probabilities[self.target_attractor_id] += proba_eps
-            self.probabilities[self.state_attractor_id] = min(self.probabilities[self.state_attractor_id], max_prob)
-            self.probabilities[self.target_attractor_id] = min(self.probabilities[self.target_attractor_id], max_prob)
-
-        for i in range(len(self.probabilities)):
-            self.probabilities[i] = max(min_prob, self.probabilities[i])
-
-        s = sum(self.probabilities)
-        for i in range(len(self.probabilities)):
-            self.probabilities[i] /= s
+    def rework_probas(self, episode_len: int = 0):
+        self.probabilities = [1/len(self.probabilities) for _ in self.probabilities]
 
     def _to_map(self, state):
         getIDs = getattr(self.graph, "getIDs", None)
@@ -396,6 +377,74 @@ class PBNTargetMultiEnv(gym.Env):
         #         else:
         #             return True
         # return False
+
+    def get_labels(self, state):
+        nodes = self.graph.nodes
+        return {node.ID: s for node, s in zip(nodes, state)}
+
+    def get_next_state(self, state, actions):
+        unlabeled_state = state
+        state = self.get_labels(state)
+        IDs = list(state.keys())
+
+        if not isinstance(actions, list):
+            actions = actions.unique().tolist()
+
+        for action in actions:
+            if action != 0:  # Action 0 is taking no action.
+                ID = IDs[action - 1]
+                state[ID] = 1 - state[ID]
+
+        i = random.randint(0, len(state) - 1)
+        new_state = state
+        new_state[IDs[i]] = self.graph.nodes[i].step(state)
+        unlabeled_new_state = tuple(new_state.values())
+
+        step_count = 0
+        returns_count = 0
+        history = defaultdict(int)
+        while not self.is_attracting_state(unlabeled_new_state):  # to liczy się na jednym cpu, i prawdobodobnie powoduje bottleneck w obliczeniach
+            i = random.randint(0, len(self.graph.nodes) - 1)
+            new_state = state
+            new_state[IDs[i]] = self.graph.nodes[i].step(state)
+
+            if unlabeled_state == unlabeled_new_state:
+                returns_count += 1
+            else:
+                returns_count = 0
+
+            unlabeled_state = unlabeled_new_state
+            unlabeled_new_state = tuple(new_state.values())
+
+            state = new_state
+
+            if returns_count > 1_000:
+                print(f"append {unlabeled_state} to attractor list")
+                self.all_attractors.append([unlabeled_state])
+                self.attracting_states.add(unlabeled_state)
+                self.probabilities.append(0)
+                self.rework_probas()
+                return unlabeled_state
+
+            step_count += 1
+            history[unlabeled_state] += 1
+
+            if step_count > 10_000:
+                states = sorted(history.items(), key=lambda kv: kv[1], reverse=True)
+                new_attractors = [node for node, frequency in states if frequency > 1500]
+
+                print(len(new_attractors))
+                for s in new_attractors:
+                    print(s, history[s])
+                    self.all_attractors.append([s])
+                    self.attracting_states.add(s)
+                    self.probabilities.append(0)
+
+                self.rework_probas()
+                step_count = 0
+
+        return unlabeled_state
+
 
 
 class BittnerMulti70(PBNTargetMultiEnv):

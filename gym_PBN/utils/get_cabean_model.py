@@ -39,10 +39,10 @@ def translate(logic_function):
 
 def get_model(env):
     model_out_path = f"kaban/results/model_{env.name}.out"
-    if os.path.isfile(model_out_path):
-        print(f"reloading model form {model_out_path}")
-        with open(f"{model_out_path}") as f:
-            return f.read()
+    # if os.path.isfile(model_out_path):
+    #     print(f"reloading model form {model_out_path}")
+    #     with open(f"{model_out_path}") as f:
+    #         return f.read()
 
     g = env.graph
 
@@ -61,13 +61,13 @@ def get_model(env):
             num_genes = len(IDs)
 
             # matrix of # of len(state) + 1 x # of states
-            truth_table = np.zeros((num_genes + 1 + 1, 2 ** (num_genes + 1)))
-            for j, state in enumerate(product([0, 1], repeat=num_genes+1)):
+            truth_table = np.zeros((num_genes + 1, 2 ** (num_genes)))
+            for j, state in enumerate(product([0, 1], repeat=num_genes)):
                 x = np.ones(num_genes + 1)
                 for i in range(len(state)):
-                    x[i] = 2 * state[i] - 1
+                    x[i] = state[i]
                     truth_table[i][j] = state[i]
-                truth_table[num_genes+1][j] = 1 if np.dot(x, A) >= 0 else 0
+                truth_table[num_genes][j] = 1 if np.dot(x, A) >= 0 else 0
 
             truth_tables[node.ID].append((IDs, truth_table))
 
@@ -79,7 +79,6 @@ def get_model(env):
         for IDs, tt in tts:
             minterms = [list(x)[:-1] for x in tt.T if list(x)[-1]]
             pred_ids = list(IDs)
-            pred_ids.append(gen)
 
             if len(pred_ids) == 1:
                 sym = symbols(pred_ids)
@@ -100,7 +99,7 @@ def get_model(env):
     with open(f"models/model_{env.name}.ispl", "w+") as f:
         f.write(out)
 
-    out = subprocess.run(["cabean", f"models/model_{env.name}.ispl"], capture_output=True, encoding='utf-8')
+    out = subprocess.run(["cabean", f"-v 3 models/model_{env.name}.ispl"], capture_output=True, encoding='utf-8')
 
     print(f"saving model to {model_out_path}")
     with open(f"{model_out_path}", "w") as f:

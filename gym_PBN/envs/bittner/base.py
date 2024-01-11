@@ -5,7 +5,6 @@ import copy
 import itertools
 import pickle
 import random
-import time
 from collections import defaultdict
 from os import path
 
@@ -31,10 +30,9 @@ class Node:
     def add_predictors(self, predictors):
         IDstoPrint = []
         for COD, A, inputIDs in predictors:
-            if type(COD) == type(None):
+            if COD is None:
                 pass
             else:
-                self.CODsum += COD
                 if len(self.predictors) == 0:
                     self.predictors += [(inputIDs, A, COD)]
                 else:
@@ -44,12 +42,7 @@ class Node:
                     for inID in list(inputIDs):
                         if inID not in IDstoPrint:
                             IDstoPrint = IDstoPrint + [inID]
-
-    def addInputNode(self, inputNode):
-        self.inputNodes += [inputNode]
-
-    def addInputNodes(self, inputNodes):
-        self.inputNodes = np.append(self.inputNodes, inputNodes)
+                    break
 
     def getInputNodes(self):
         inputList = []
@@ -61,10 +54,6 @@ class Node:
 
     def setValue(self, value):
         self.value = value
-
-    def addLUT(self, LUT, inputIDs):
-        self.LUT = LUT
-        self.inputIDs = inputIDs
 
     def getStateProbs(self, state):
         probs = [0] * 2
@@ -87,15 +76,16 @@ class Node:
             probs[Y] += currCOD / self.CODsum
         return probs
 
-    def Predstep(self, state):
-        if self.value is None:
-            raise Exception("Forgot to initialise the states")
+    def step(self, state):
+        # if self.value is None:
+        #     raise Exception("Forgot to initialise the states")
 
         # choose predictor
         r = random.random() * self.CODsum
         for IDs, A, COD in self.predictors:
             if COD > r:
                 break
+            r -= COD
 
         # relevant genes vector
         X = np.ones((len(IDs) + 1, 1))
@@ -104,82 +94,16 @@ class Node:
             X[j] = x
         X[len(IDs)] = state[self.ID]
 
-        # predict
-        # I think something was missing here, probably sigmoid
         # compare paper DOI:10.1117/1.1289142 equation (2) and following paragraph
-        # I added simgmoid, it makes the most sense to me
         Ypred = np.matmul(X.T, A)
 
-        # logistic.cdf turs out to be expensive to compute
-        # Ypred = logistic.cdf(Ypred)
-        # x < 0. <=> sigmoid(x) < 0.5
         if Ypred < 0.:
             Y = 0
         else:
             Y = 1
-        return Y
 
-    def LUTstep(self, state):
-        raise ValueError("you shouldn't be here")
-        X = np.empty((len(self.inputIDs), 1))
-        for j in range(len(self.inputIDs)):
-            ID = self.inputIDs[j]
-            x = state[ID]
-            X[j] = x
-        inputInt = int(integerize(X)[0])
-        LUTrow = self.LUT[inputInt, :]
-
-        r = random.random()
-        if r < LUTrow[0]:
-            Y = 0
-        else:
-            Y = 1
-        return Y
-
-    def step(self, state, verbose=False):
-        if self.LUTflag:
-            Y = self.LUTstep(state)
-        else:
-            Y = self.Predstep(state)
         self.value = Y
         return Y
-
-
-def genBoolList(n, length, b):
-    output = np.zeros((length), dtype=int)
-    for i in range(length):
-        output[i] = n % b
-        n = n // b
-    return output
-
-
-def integerize(state):
-    output = 0
-    for i in range(len(state)):
-        output += state[i] * (2**i)
-    return output
-
-
-def KSstatistic(states1, states2, nMax):
-    # Oh boy let's go
-    M = states1.size
-    maxDist = 0
-    for x in range(nMax):
-        dist = abs(states1[x] - states2[x])
-        if dist > maxDist:
-            maxDist = dist
-    D = maxDist
-    signif = smirnov(M, D)
-    print("D: {0}".format(D))
-    #    print("Alpha: {0}".format(signif))
-    return D, signif
-
-
-def indicatorF(inp, x):
-    if inp <= x:
-        return 1
-    else:
-        return 0
 
 
 # Object representing the Graph of the Probabilistic/random boolean network
@@ -242,37 +166,8 @@ class Graph:
 
         return nextStates
 
-    # sync version of getNextStates
-    def sync_getNextStates(self):
-        probs = []
-        for node in self.nodes:
-            prob = node.getStateProbs(self.getState())
-            probs = probs + [prob]
-        a = [[0, 1]] * len(self.nodes)
-        possibleStates = list(itertools.product(*a))
-        nextStates = defaultdict(float)
-        for state in possibleStates:
-            p = 1
-            for i in range(len(state)):
-                p *= probs[i][state[i]]
-            if p > 0:
-                nextStates[state] = p
-        return nextStates
-
     def add_nodes(self, nodeList):
         self.nodes = nodeList
-
-    def addCon(self, conn):
-        k = conn.shape[0] - 1
-        self.k = k
-        for i in range(conn.shape[1]):
-            targID = conn[k, i]
-            targNode = self.getNodeByID(targID)
-            for j in range(k):
-                predID = conn[j, i]
-                predNode = self.getNodeByID(predID)
-                self.edges = self.edges + [(predNode.index, targNode.index)]
-                targNode.addInputNode(predNode)
 
     def addEdge(self, startIndex, endIndex):
         self.nodes[endIndex].addInputNode(self.nodes[startIndex])
@@ -304,11 +199,10 @@ class Graph:
                 self.nodes[i].step(oldState)
 
     # async. step
-    def step(self, changed_nodes: list = None, i=None):
+    def step(self, i=None):
         oldState = self.getLabeledState()
         i = random.randint(0, len(self.nodes) - 1) if i is None else i
-        # while i in changed_nodes:
-        #     i = random.randint(0, len(self.nodes) - 1)
+
         self.nodes[i].step(oldState)
         return self.getState()
 
@@ -323,16 +217,6 @@ class Graph:
         for node in self.nodes:
             outputState[node.ID] = node.value
         return tuple(outputState.values())
-
-    def getNames(self):
-        names = []
-        for i in range(0, len(self.nodes)):
-            names.append([self.nodes[i].name])
-        return names
-
-    def getIDs(self):
-        IDs = [node.ID for node in self.nodes]
-        return IDs
 
     def getNodeByID(self, ID):
         for node in self.nodes:

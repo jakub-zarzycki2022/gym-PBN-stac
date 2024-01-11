@@ -20,8 +20,8 @@ def generate_predictor_sets(
     n_samples = len(gene_data.columns)
 
     # Load if exists
-    if Path(savepath).exists():
-        return pickle.load((open(savepath, "rb")))
+    # if Path(savepath).exists():
+    #     return pickle.load((open(savepath, "rb")))
 
     # Otherwise generate
     genes = gene_data.index.unique()
@@ -30,7 +30,7 @@ def generate_predictor_sets(
     predictor_sets = process_map(
         _func,
         genes,
-        max_workers=multiprocessing.cpu_count(),
+        max_workers=1,
         bar_format="{l_bar}{bar}| {n_fmt}/{total_fmt} [{remaining}]",
     )
 
@@ -43,7 +43,7 @@ def generate_predictor_sets(
 def _gen_predictor_sets_gene(gene_data, n_samples, n_predictors, k, gene):
     # Data processing
     buff = np.empty((3, n_predictors), dtype=object)
-    temp_data = gene_data.drop(gene)
+    temp_data = gene_data.copy()
 
     remaining_genes = temp_data.index.unique().to_numpy()
     remaining_genes_idx = range(len(remaining_genes))
@@ -82,7 +82,7 @@ def add_to_buff(buff, data):
     COD, _, _ = data
 
     i = 0
-    while i < n_predictors - 1:
+    for i in range(n_predictors):
         # If there's an empty slot in the buffer
         if buff[0, i] is None:
             buff[:, i] = data  # Just add it

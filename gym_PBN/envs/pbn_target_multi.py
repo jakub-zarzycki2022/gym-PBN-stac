@@ -76,6 +76,8 @@ class PBNTargetMultiEnv(gym.Env):
         self.target_state_id = -1
         self.recent_actions = defaultdict(lambda: 10)
 
+        self.target_attractor_id, self.state_attractor_id = -1, -1
+
     def _seed(self, seed: int = None):
         np.random.seed(seed)
         random.seed(seed)
@@ -128,7 +130,7 @@ class PBNTargetMultiEnv(gym.Env):
                     self.recent_actions.pop(action - 1)
 
         observation = self.graph.getState()
-        self.graph.step(list(self.recent_actions.keys()))
+        self.graph.step()
 
         step_count = 0
         returns_count = 0
@@ -139,16 +141,17 @@ class PBNTargetMultiEnv(gym.Env):
 
             if observation == old_observation:
                 returns_count += 1
+
+                if returns_count > 1_000:
+                    print(f"append {observation} to attractor list")
+                    self.all_attractors.append([observation])
+                    self.attracting_states.add(observation)
+                    self.probabilities.append(0)
+                    self.rework_probas()
+                    break
+
             else:
                 returns_count = 0
-
-            if returns_count > 1_000:
-                print(f"append {observation} to attractor list")
-                self.all_attractors.append([observation])
-                self.attracting_states.add(observation)
-                self.probabilities.append(0)
-                self.rework_probas()
-                break
 
             step_count += 1
             history[observation] += 1
@@ -162,15 +165,15 @@ class PBNTargetMultiEnv(gym.Env):
                     print(s, history[s])
                     self.all_attractors.append([s])
                     self.attracting_states.add(s)
-                    self.probabilities.append(0)
+                    # self.probabilities.append(0)
 
-                self.rework_probas()
+                # self.rework_probas()
                 step_count = 0
 
         reward, terminated, truncated = self._get_reward(observation, actions)
         info = {
-            "observation_idx": self._state_to_idx(observation),
-            "observation_dict": observation,
+            # "observation_idx": self._state_to_idx(observation),
+            # "observation_dict": observation,
         }
 
         return observation, reward, terminated, truncated, info
@@ -227,16 +230,18 @@ class PBNTargetMultiEnv(gym.Env):
         if seed:
             self._seed(seed)
 
-        self.target_attractor_id = np.random.choice(range(len(self.all_attractors)),
-                                                    p=self.probabilities)
+        self.target_attractor_id, self.state_attractor_id = np.random.choice(range(len(self.all_attractors)),
+                                                                             size=2,
+                                                                             replace=False)
 
-        self.state_attractor_id = np.random.choice(range(len(self.all_attractors) - 1))
-
-        if self.state_attractor_id >= self.target_attractor_id:
-            self.state_attractor_id += 1
-
-        state_attractor = self.all_attractors[self.state_attractor_id]
-        target_attractor = self.all_attractors[self.target_attractor_id]
+        try:
+            state_attractor = self.all_attractors[self.state_attractor_id]
+            target_attractor = self.all_attractors[self.target_attractor_id]
+        except Exception as e:
+            print(len(self.all_attractors), self.all_attractors)
+            print(self.state_attractor_id)
+            print(self.target_attractor_id)
+            raise e
 
         state = list(random.choice(state_attractor))
         target = list(random.choice(target_attractor))
@@ -301,6 +306,7 @@ class PBNTargetMultiEnv(gym.Env):
     def compute_attractors(self):
         print("Computing attractors...")
         STG = self.render(mode="STG")
+        print("stg generated")
         generator = nx.algorithms.components.attracting_components(STG)
         return self._nx_attractors_to_tuples(list(generator))
 
@@ -474,7 +480,8 @@ class BittnerMulti70(PBNTargetMultiEnv):
             total_genes=self.N,
             include_ids=self.includeIDs,
             bin_method="median",
-            n_predictors=3,
+            n_predictors=1,
+            k=2,
             predictor_sets_path=self.predictor_sets_path,
         )
 
@@ -537,8 +544,8 @@ class BittnerMulti7(PBNTargetMultiEnv):
             total_genes=self.N,
             include_ids=self.includeIDs,
             bin_method="median",
-            n_predictors=3,
-            k=3,
+            n_predictors=1,
+            k=2,
             predictor_sets_path=self.predictor_sets_path,
         )
 
@@ -561,28 +568,9 @@ class BittnerMulti7(PBNTargetMultiEnv):
         self.horizon = horizon
         print("Single episode horizon is ", self.horizon)
 
-        # if using cabean
-        # self.all_attractors = get_attractors(self)
-        # for attractor in self.all_attractors:
-        #     for state in attractor:
-        #         stars = 0
-        #         positions = []
-        #         for i, s in enumerate(state):
-        #             if s == '*':
-        #                 stars += 1
-        #                 positions.append(i)
-        #
-        #         if stars == 0:
-        #             self.attracting_states.add(tuple(state))
-        #
-        #         for p in product([0, 1], repeat=stars):
-        #             state_mutable = list(state)
-        #             for i, pos in enumerate(positions):
-        #                 state_mutable[pos] = p[i]
-        #                 self.attracting_states.add(tuple(state_mutable))
-
         # if using statistical_attractors
         remember = False
+        print(get_attractors(self))
         if remember:
             self.all_attractors = [[(1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1)],
                                    [(1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 0)],

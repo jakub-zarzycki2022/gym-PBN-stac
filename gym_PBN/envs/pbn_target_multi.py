@@ -66,6 +66,8 @@ class PBNTargetMultiEnv(gym.Env):
         self.non_attractors = set()
         self.attracting_states = set()
         self.counter = 0
+        self.histogram = 0
+        self.stable = 0
 
         # distribution for choosing starting end target attractors
         # initially uniform, will be to boost the frequency of hard cases
@@ -75,6 +77,8 @@ class PBNTargetMultiEnv(gym.Env):
         self.initial_state_id = -1
         self.target_state_id = -1
         self.recent_actions = defaultdict(lambda: 10)
+
+        self.target_attractor_id, self.state_attractor_id = -1, -1
 
     def _seed(self, seed: int = None):
         np.random.seed(seed)
@@ -128,7 +132,7 @@ class PBNTargetMultiEnv(gym.Env):
                     self.recent_actions.pop(action - 1)
 
         observation = self.graph.getState()
-        self.graph.step(list(self.recent_actions.keys()))
+        self.graph.step()
 
         step_count = 0
         returns_count = 0
@@ -139,16 +143,16 @@ class PBNTargetMultiEnv(gym.Env):
 
             if observation == old_observation:
                 returns_count += 1
+
+                if returns_count > 1000:
+                    self.all_attractors.append([observation])
+                    self.attracting_states.add(observation)
+                    self.probabilities.append(0)
+                    self.rework_probas()
+                    break
+
             else:
                 returns_count = 0
-
-            if returns_count > 1_000:
-                print(f"append {observation} to attractor list")
-                self.all_attractors.append([observation])
-                self.attracting_states.add(observation)
-                self.probabilities.append(0)
-                self.rework_probas()
-                break
 
             step_count += 1
             history[observation] += 1
@@ -157,11 +161,10 @@ class PBNTargetMultiEnv(gym.Env):
                 states = sorted(history.items(), key=lambda kv: kv[1], reverse=True)
                 new_attractors = [node for node, frequency in states if frequency > 1500]
 
-                print(len(new_attractors))
                 for s in new_attractors:
-                    print(s, history[s])
                     self.all_attractors.append([s])
                     self.attracting_states.add(s)
+                    self.histogram += 1
                     self.probabilities.append(0)
 
                 self.rework_probas()
@@ -169,8 +172,8 @@ class PBNTargetMultiEnv(gym.Env):
 
         reward, terminated, truncated = self._get_reward(observation, actions)
         info = {
-            "observation_idx": self._state_to_idx(observation),
-            "observation_dict": observation,
+            # "observation_idx": self._state_to_idx(observation),
+            # "observation_dict": observation,
         }
 
         return observation, reward, terminated, truncated, info
@@ -227,16 +230,18 @@ class PBNTargetMultiEnv(gym.Env):
         if seed:
             self._seed(seed)
 
-        self.target_attractor_id = np.random.choice(range(len(self.all_attractors)),
-                                                    p=self.probabilities)
+        self.target_attractor_id, self.state_attractor_id = np.random.choice(range(len(self.all_attractors)),
+                                                                             size=2,
+                                                                             replace=False)
 
-        self.state_attractor_id = np.random.choice(range(len(self.all_attractors) - 1))
-
-        if self.state_attractor_id >= self.target_attractor_id:
-            self.state_attractor_id += 1
-
-        state_attractor = self.all_attractors[self.state_attractor_id]
-        target_attractor = self.all_attractors[self.target_attractor_id]
+        try:
+            state_attractor = self.all_attractors[self.state_attractor_id]
+            target_attractor = self.all_attractors[self.target_attractor_id]
+        except Exception as e:
+            print(len(self.all_attractors), self.all_attractors)
+            print(self.state_attractor_id)
+            print(self.target_attractor_id)
+            raise e
 
         state = list(random.choice(state_attractor))
         target = list(random.choice(target_attractor))
@@ -301,6 +306,7 @@ class PBNTargetMultiEnv(gym.Env):
     def compute_attractors(self):
         print("Computing attractors...")
         STG = self.render(mode="STG")
+        print("stg generated")
         generator = nx.algorithms.components.attracting_components(STG)
         return self._nx_attractors_to_tuples(list(generator))
 
@@ -326,38 +332,45 @@ class PBNTargetMultiEnv(gym.Env):
 
         steps = 10**3
         simulations = 10**3
-        min_attractors = 4
+        min_attractors = 3
 
         print(f"Calculating state statistics for N = {self.N}")
         print(f"running {simulations} simulations {steps} steps each")
+        statistial_attractors = set()
 
-        for i in range(simulations):
+        i = -1
+        while len(statistial_attractors) < min_attractors:
+            i += 1
+            state_log = defaultdict(int)
             if i % 10**3 == 0:
                 print(i)
             s = [random.randint(0, 1) for _ in range(self.N)]
             self.graph.setState(s)
+
+            # warmup
+            for _ in range(200):
+                _ = self.step([], force=True)
+
             for j in range(steps):
                 state = tuple(self.render())
                 state_log[state] += 1
                 _ = self.step([], force=True)
 
-        states = sorted(state_log.items(), key=lambda kv: kv[1], reverse=True)
+            states = sorted(state_log.items(), key=lambda kv: kv[1], reverse=True)
 
-        statistial_attractors = [node for node, frequency in states if frequency > 0.15 * steps * simulations]
-        print(f"(15%) choosing {len(statistial_attractors)} out of {len(states)}")
-
-        if len(statistial_attractors) < min_attractors:
-            statistial_attractors = [node for node, frequency in states if frequency > 0.1 * steps * simulations]
+            statistial_attractors.update([node for node, frequency in states if frequency > 0.1 * steps])
             frequencies = sorted([frequency for node, frequency in states], reverse=True)[:10]
             print(f"(10%) recalculating using {frequencies}. Got {len(statistial_attractors)}")
 
-        if len(statistial_attractors) < min_attractors:
-            statistial_attractors = [node for node, frequency in states if frequency > 0.05 * steps * simulations]
-            print(f"(5%) recalculating. Got {len(statistial_attractors)}")
+        # statistial_attractors = [node for node, frequency in states if frequency > 0.1 * steps * simulations]
+        # frequencies = sorted([frequency for node, frequency in states], reverse=True)[:10]
+        # print(f"(10%) recalculating using {frequencies}. Got {len(statistial_attractors)}")
+        #
+        # statistial_attractors = [node for node, frequency in states if frequency > 0.05 * steps * simulations]
+        # print(f"(5%) recalculating. Got {len(statistial_attractors)}")
 
-        if len(statistial_attractors) < min_attractors:
-            statistial_attractors = [node for node, frequency in states[:min_attractors]]
-            print(f"recalculating. Got {len(statistial_attractors)}")
+            # # statistial_attractors = [node for node, frequency in states[:min_attractors]]
+            # print(f"recalculating. Got {len(statistial_attractors)}")
 
         print(f"got {statistial_attractors}")
         return statistial_attractors
@@ -446,7 +459,6 @@ class PBNTargetMultiEnv(gym.Env):
         return unlabeled_state
 
 
-
 class BittnerMulti70(PBNTargetMultiEnv):
     predictor_sets_path = Path(__file__).parent / "bittner" / "data"
     genedata = predictor_sets_path / "genedata.xls"
@@ -465,18 +477,11 @@ class BittnerMulti70(PBNTargetMultiEnv):
         reward_config: dict = None,
         end_episode_on_success: bool = True,
     ):
+        print("DEPRECATED")
+        raise ValueError
         print(f"its me, bittner-{self.N}")
         if not name:
             name = self.NAME
-
-        graph = utils.spawn(
-            file=self.genedata,
-            total_genes=self.N,
-            include_ids=self.includeIDs,
-            bin_method="median",
-            n_predictors=3,
-            predictor_sets_path=self.predictor_sets_path,
-        )
 
         goal_config = {
             "target_nodes": [234237, 324901, 759948, 25485, 266361, 108208, 130057],
@@ -537,8 +542,8 @@ class BittnerMulti7(PBNTargetMultiEnv):
             total_genes=self.N,
             include_ids=self.includeIDs,
             bin_method="median",
-            n_predictors=3,
-            k=3,
+            n_predictors=1,
+            k=2,
             predictor_sets_path=self.predictor_sets_path,
         )
 
@@ -561,28 +566,9 @@ class BittnerMulti7(PBNTargetMultiEnv):
         self.horizon = horizon
         print("Single episode horizon is ", self.horizon)
 
-        # if using cabean
-        # self.all_attractors = get_attractors(self)
-        # for attractor in self.all_attractors:
-        #     for state in attractor:
-        #         stars = 0
-        #         positions = []
-        #         for i, s in enumerate(state):
-        #             if s == '*':
-        #                 stars += 1
-        #                 positions.append(i)
-        #
-        #         if stars == 0:
-        #             self.attracting_states.add(tuple(state))
-        #
-        #         for p in product([0, 1], repeat=stars):
-        #             state_mutable = list(state)
-        #             for i, pos in enumerate(positions):
-        #                 state_mutable[pos] = p[i]
-        #                 self.attracting_states.add(tuple(state_mutable))
-
         # if using statistical_attractors
         remember = False
+        print("from cabean ", get_attractors(self))
         if remember:
             self.all_attractors = [[(1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1)],
                                    [(1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 0)],

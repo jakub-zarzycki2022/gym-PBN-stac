@@ -519,7 +519,7 @@ class BittnerMulti7(PBNTargetMultiEnv):
             total_genes=self.N,
             include_ids=self.includeIDs,
             bin_method="median",
-            n_predictors=1,
+            n_predictors=3,
             k=3,
             predictor_sets_path=self.predictor_sets_path,
         )

@@ -37,8 +37,8 @@ class PBNEnv(PBNTargetMultiEnv):
             render_mode,
             render_no_cache,
             name,
-            None,
             end_episode_on_success,
+            horizon=20
         )
 
         self.all_attractors = [[s] for s in self.statistical_attractors()]

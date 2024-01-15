@@ -495,7 +495,6 @@ class BittnerMulti7(PBNTargetMultiEnv):
 
     includeIDs = [234237, 324901, 759948, 25485, 266361, 108208, 130057]
 
-
     N = 7
     NAME = "Bittner-7"
 
@@ -546,7 +545,8 @@ class BittnerMulti7(PBNTargetMultiEnv):
 
         # if using statistical_attractors
         remember = False
-        print("from cabean ", get_attractors(self))
+        self.real_attractors = get_attractors(self)
+        print("from cabean ", len(self.real_attractors))
         if remember:
             self.all_attractors = [[(1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1)],
                                    [(1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 0)],

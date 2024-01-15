@@ -161,11 +161,11 @@ class PBNTargetMultiEnv(gym.Env):
                 for s in new_attractors:
                     self.all_attractors.append([s])
                     self.attracting_states.add(s)
-                    self.histogram += 1
                     self.probabilities.append(0)
 
                 self.rework_probas()
                 step_count = 0
+                history = defaultdict(int)
 
         reward, terminated, truncated = self._get_reward(observation, actions)
         info = {

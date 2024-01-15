@@ -321,19 +321,17 @@ class PBNTargetMultiEnv(gym.Env):
         self.setTarget([[0] * self.N])
 
         steps = 10**3
-        simulations = 10**3
         min_attractors = 3
 
         print(f"Calculating state statistics for N = {self.N}")
-        print(f"running {simulations} simulations {steps} steps each")
+        print(f"running simulations. {steps} steps each")
         statistial_attractors = set()
 
         i = -1
         while len(statistial_attractors) < min_attractors:
             i += 1
             state_log = defaultdict(int)
-            if i % 10**3 == 0:
-                print(i)
+            print(i)
             s = [random.randint(0, 1) for _ in range(self.N)]
             self.graph.setState(s)
 
@@ -350,17 +348,7 @@ class PBNTargetMultiEnv(gym.Env):
 
             statistial_attractors.update([node for node, frequency in states if frequency > 0.1 * steps])
             frequencies = sorted([frequency for node, frequency in states], reverse=True)[:10]
-            print(f"(10%) recalculating using {frequencies}. Got {len(statistial_attractors)}")
-
-        # statistial_attractors = [node for node, frequency in states if frequency > 0.1 * steps * simulations]
-        # frequencies = sorted([frequency for node, frequency in states], reverse=True)[:10]
-        # print(f"(10%) recalculating using {frequencies}. Got {len(statistial_attractors)}")
-        #
-        # statistial_attractors = [node for node, frequency in states if frequency > 0.05 * steps * simulations]
-        # print(f"(5%) recalculating. Got {len(statistial_attractors)}")
-
-            # # statistial_attractors = [node for node, frequency in states[:min_attractors]]
-            # print(f"recalculating. Got {len(statistial_attractors)}")
+            print(f"(10%) calculating using {frequencies}. Got {len(statistial_attractors)}")
 
         print(f"got {statistial_attractors}")
         return statistial_attractors

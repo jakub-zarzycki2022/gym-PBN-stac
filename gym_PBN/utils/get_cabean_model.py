@@ -65,7 +65,7 @@ def get_model(env):
             for j, state in enumerate(product([0, 1], repeat=num_genes+1)):
                 x = np.ones(num_genes + 1)
                 for i in range(len(state)):
-                    x[i] = 2 * state[i] - 1
+                    x[i] = state[i]
                     truth_table[i][j] = state[i]
                 truth_table[num_genes+1][j] = 1 if np.dot(x, A) >= 0 else 0
 

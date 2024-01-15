@@ -66,8 +66,6 @@ class PBNTargetMultiEnv(gym.Env):
         self.non_attractors = set()
         self.attracting_states = set()
         self.counter = 0
-        self.histogram = 0
-        self.stable = 0
 
         # distribution for choosing starting end target attractors
         # initially uniform, will be to boost the frequency of hard cases
@@ -118,7 +116,6 @@ class PBNTargetMultiEnv(gym.Env):
 
     def step(self, actions, force=False):
         if not isinstance(actions, list):
-            print(actions)
             actions = actions.unique().tolist()
 
         self.n_steps += 1
@@ -234,14 +231,8 @@ class PBNTargetMultiEnv(gym.Env):
                                                                              size=2,
                                                                              replace=False)
 
-        try:
-            state_attractor = self.all_attractors[self.state_attractor_id]
-            target_attractor = self.all_attractors[self.target_attractor_id]
-        except Exception as e:
-            print(len(self.all_attractors), self.all_attractors)
-            print(self.state_attractor_id)
-            print(self.target_attractor_id)
-            raise e
+        state_attractor = self.all_attractors[self.state_attractor_id]
+        target_attractor = self.all_attractors[self.target_attractor_id]
 
         state = list(random.choice(state_attractor))
         target = list(random.choice(target_attractor))
@@ -306,7 +297,6 @@ class PBNTargetMultiEnv(gym.Env):
     def compute_attractors(self):
         print("Computing attractors...")
         STG = self.render(mode="STG")
-        print("stg generated")
         generator = nx.algorithms.components.attracting_components(STG)
         return self._nx_attractors_to_tuples(list(generator))
 
@@ -542,8 +532,8 @@ class BittnerMulti7(PBNTargetMultiEnv):
             total_genes=self.N,
             include_ids=self.includeIDs,
             bin_method="median",
-            n_predictors=1,
-            k=2,
+            n_predictors=3,
+            k=3,
             predictor_sets_path=self.predictor_sets_path,
         )
 

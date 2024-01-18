@@ -1,4 +1,5 @@
-# gym-PBN
+# gym-Deep Reinforcement Learning for Controlled Traversing of Probabilistic Boolean Network Attractor Landscape in the Context of Cellular Reprogramming
+This repository provides the code for envirionments used in training of agents in the manuscript "Deep Reinforcement Learning for Controlled Traversing of Probabilistic Boolean Network Attractor Landscape in the Context of Cellular Reprogramming"
 
 A Gymnasium environment modelling Probabilistic Boolean Networks and Probabilistic Boolean Control Networks.
 
@@ -9,6 +10,8 @@ The control of Probabilistic Boolean (Control) Networks is a well studied proble
 This repository contains code used in our [IEEE TCNS paper](https://ieeexplore.ieee.org/document/9999487) on control of large-scale PBNs and this [Elsevier Information Sciences paper](https://www.sciencedirect.com/science/article/pii/S0020025522013196).
 
 The point of this library is to provide accessible PB(C)N control MDPs as Gymnasium environments. The environments provided are fully [Stable Baselines3](https://github.com/DLR-RM/stable-baselines3)-compatible.
+
+This project extends the original methods introduced in [Papagiannis, Georgios, et al., 2019](https://arxiv.org/abs/1909.03331).
 
 ## Environments
 

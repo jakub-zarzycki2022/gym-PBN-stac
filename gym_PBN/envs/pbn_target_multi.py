@@ -39,6 +39,7 @@ class PBNTargetMultiEnv(gym.Env):
         name: str = None,
         end_episode_on_success: bool = False,
         horizon: int = 100,
+        min_attractors=6,
     ):
         self.target = None
         self.graph = graph
@@ -77,6 +78,7 @@ class PBNTargetMultiEnv(gym.Env):
         self.recent_actions = defaultdict(lambda: 10)
 
         self.target_attractor_id, self.state_attractor_id = -1, -1
+        self.min_attractors = min_attractors
 
     def _seed(self, seed: int = None):
         np.random.seed(seed)
@@ -114,7 +116,7 @@ class PBNTargetMultiEnv(gym.Env):
 
         return config
 
-    def step(self, actions, force=False):
+    def step(self, actions, force=True):
         if not isinstance(actions, list):
             actions = actions.unique().tolist()
 
@@ -210,13 +212,13 @@ class PBNTargetMultiEnv(gym.Env):
         Returns:
             Tuple[REWARD, TERMINATED, TRUNCATED]: Tuple of the reward and the environment done status.
         """
-        reward, terminated = 3, False
+        reward, terminated = 0, False
         observation = tuple(observation)
 
-        reward -= 1 * len(actions)
+        # reward -= 1 * len(actions)
 
         if self.in_target(observation):
-            reward += 5
+            reward += 100
             terminated = True
 
         truncated = self.n_steps == self.horizon
@@ -237,11 +239,11 @@ class PBNTargetMultiEnv(gym.Env):
         state = list(random.choice(state_attractor))
         target = list(random.choice(target_attractor))
 
-        for i in range(len(state)):
-            if state[i] == "*":
-                state[i] = random.randint(0, 1)
-            if target[i] == "*":
-                target[i] = random.randint(0, 1)
+        # for i in range(len(state)):
+        #     if state[i] == "*":
+        #         state[i] = random.randint(0, 1)
+        #     if target[i] == "*":
+        #         target[i] = random.randint(0, 1)
 
         self.graph.setState(state)
 
@@ -321,7 +323,7 @@ class PBNTargetMultiEnv(gym.Env):
         self.setTarget([[0] * self.N])
 
         steps = 10**3
-        min_attractors = 3
+        min_attractors = self.min_attractors
 
         print(f"Calculating state statistics for N = {self.N}")
         print(f"running simulations. {steps} steps each")
@@ -506,6 +508,7 @@ class BittnerMulti7(PBNTargetMultiEnv):
             horizon: int = 100,
             reward_config: dict = None,
             end_episode_on_success: bool = True,
+            min_attractors=3,
     ):
         if not name:
             name = self.NAME
@@ -541,6 +544,7 @@ class BittnerMulti7(PBNTargetMultiEnv):
         )
 
         self.horizon = horizon
+        self.min_attractors = min_attractors
         print("Single episode horizon is ", self.horizon)
 
         # if using statistical_attractors
@@ -605,7 +609,7 @@ class BittnerMulti50(BittnerMulti7):
 
 
 class BittnerMultiGeneral(BittnerMulti7):
-    def __init__(self, N, horizon=100):
+    def __init__(self, N, horizon=100, min_attractors=3):
         self.N = N
         self.NAME = f"BittnerMulti-{N}"
 
@@ -616,7 +620,7 @@ class BittnerMultiGeneral(BittnerMulti7):
                           812276, 51018, 306013, 418105]
             self.includeIDs = sorted(includeIDs)
 
-        super().__init__(horizon=horizon)
+        super().__init__(horizon=horizon, min_attractors=min_attractors)
 
 
 class BittnerMulti28(BittnerMulti7):

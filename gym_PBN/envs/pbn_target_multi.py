@@ -117,7 +117,7 @@ class PBNTargetMultiEnv(gym.Env):
 
         return config
 
-    def step(self, actions, force=True, perturbation_prob=0.):
+    def step(self, actions, force=False , perturbation_prob=0.):
         if not isinstance(actions, list):
             actions = actions.unique().tolist()
 
@@ -165,6 +165,8 @@ class PBNTargetMultiEnv(gym.Env):
                     self.attracting_states.add(observation)
                     self.probabilities.append(0)
                     self.rework_probas()
+                    with open(self.path, "wb+") as f:
+                        pickle.dump(self.all_attractors, f)
                     break
 
             else:
@@ -185,6 +187,8 @@ class PBNTargetMultiEnv(gym.Env):
                 self.rework_probas()
                 step_count = 0
                 history = defaultdict(int)
+                with open(self.path, "wb+") as f:
+                    pickle.dump(self.all_attractors, f)
 
         reward, terminated, truncated = self._get_reward(observation, actions)
         info = {
@@ -570,13 +574,16 @@ class BittnerMulti7(PBNTargetMultiEnv):
         remember = False
         # self.real_attractors = get_attractors(self)
         # print("from cabean ", len(self.real_attractors))
-        path = f"attractors/{self.N}_{self.n_predictors}_attractors.pkl"
+        self.path = f"attractors/{self.N}_{self.n_predictors}_attractors.pkl"
         try:
-            with open(path, "rb") as f:
+            print(f"try to load: \n{self.path}")
+            with open(self.path, "rb") as f:
                 attractors = pickle.load(f)
                 self.all_attractors = attractors
         except FileNotFoundError:
             self.all_attractors = [[s] for s in self.statistical_attractors()]
+            with open(self.path, "wb+") as f:
+                pickle.dump(self.all_attractors, f)
 
         for a in self.all_attractors:
             self.attracting_states.add(a[0])

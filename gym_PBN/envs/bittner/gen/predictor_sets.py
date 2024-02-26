@@ -10,6 +10,7 @@ import pandas as pd
 from numba import njit
 from tqdm.contrib.concurrent import process_map
 
+
 def generate_predictor_sets(
         gene_data: pd.DataFrame,
         k=3,
@@ -54,7 +55,7 @@ def _gen_predictor_sets_gene(gene_data, n_samples, n_predictors, k, gene):
     )
 
     # All possible predictor combinations - O(k * (n choose k))
-    for combination in itertools.combinations(remaining_genes_idx, k):
+    for i, combination in enumerate(itertools.combinations(remaining_genes_idx, k)):
         n_genes = len(combination)
         comb_gene_states = remaining_genes_states[list(combination)]
 

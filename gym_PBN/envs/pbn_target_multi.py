@@ -1,3 +1,4 @@
+import pickle
 import random
 from collections import defaultdict
 from itertools import product
@@ -116,9 +117,25 @@ class PBNTargetMultiEnv(gym.Env):
 
         return config
 
-    def step(self, actions, force=True):
+    def step(self, actions, force=True, perturbation_prob=0.):
         if not isinstance(actions, list):
             actions = actions.unique().tolist()
+
+        # alternative perturbation:
+        # if random.random() < perturbation_prob:
+        #     state = [random.randint(0, 1) for _ in self.graph.N]
+        #     self.graph.setState(state)
+
+        # perturbation:
+        if random.random() < perturbation_prob:
+            state = self.graph.getState()
+            filp = random.sample(range(self.graph.N), 3)
+
+            for f in filp:
+                state[f] = 1 - state[f]
+                actions.remove(f)
+
+            self.graph.setState(state)
 
         self.n_steps += 1
 
@@ -215,7 +232,7 @@ class PBNTargetMultiEnv(gym.Env):
         reward, terminated = 0, False
         observation = tuple(observation)
 
-        # reward -= 1 * len(actions)
+        reward -= 1 * len(actions)
 
         if self.in_target(observation):
             reward += 100
@@ -509,6 +526,7 @@ class BittnerMulti7(PBNTargetMultiEnv):
             reward_config: dict = None,
             end_episode_on_success: bool = True,
             min_attractors=3,
+            n_predictors=3
     ):
         if not name:
             name = self.NAME
@@ -516,13 +534,14 @@ class BittnerMulti7(PBNTargetMultiEnv):
         print(f"initing {name}")
 
         self.includeIDs = sorted(self.includeIDs)
+        self.n_predictors = n_predictors
 
         graph = utils.spawn(
             file=self.genedata,
             total_genes=self.N,
             include_ids=self.includeIDs,
             bin_method="median",
-            n_predictors=3,
+            n_predictors=n_predictors,
             k=3,
             predictor_sets_path=self.predictor_sets_path,
         )
@@ -549,26 +568,14 @@ class BittnerMulti7(PBNTargetMultiEnv):
 
         # if using statistical_attractors
         remember = False
-        self.real_attractors = get_attractors(self)
-        print("from cabean ", len(self.real_attractors))
-        if remember:
-            self.all_attractors = [[(1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1)],
-                                   [(1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 0)],
-                                   [(1, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0)],
-                                   [(1, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0)],
-                                   [(1, 1, 1, 0, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 0)],
-                                   [(1, 1, 1, 0, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1)],
-                                   [(1, 1, 1, 0, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1)],
-                                   [(1, 1, 1, 0, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 0)],
-                                   [(1, 1, 1, 0, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1)],
-                                   [(1, 1, 1, 0, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1)],
-                                   [(1, 1, 1, 0, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 0)],
-                                   [(1, 1, 1, 0, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 0)],
-                                   [(1, 0, 1, 1, 1, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0)],
-                                   [(1, 0, 1, 1, 1, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1)],
-                                   [(1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0)]]
-
-        else:
+        # self.real_attractors = get_attractors(self)
+        # print("from cabean ", len(self.real_attractors))
+        path = f"attractors/{self.N}_{self.n_predictors}_attractors.pkl"
+        try:
+            with open(path, "rb") as f:
+                attractors = pickle.load(f)
+                self.all_attractors = attractors
+        except FileNotFoundError:
             self.all_attractors = [[s] for s in self.statistical_attractors()]
 
         for a in self.all_attractors:

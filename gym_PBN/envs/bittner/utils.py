@@ -62,9 +62,8 @@ def spawn(
 ):
     gene_data, weight_ids = extract_gene_data(file)
 
-    if total_genes != len(include_ids):
+    if int(total_genes) > len(include_ids):
         include_ids = pad_ids(include_ids, total_genes, weight_ids)
-
         # we need include_ids to be sorted for interoperability with cabean
         include_ids = sorted(include_ids)
 

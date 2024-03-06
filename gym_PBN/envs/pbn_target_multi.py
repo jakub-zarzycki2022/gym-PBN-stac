@@ -128,12 +128,13 @@ class PBNTargetMultiEnv(gym.Env):
 
         # perturbation:
         if random.random() < perturbation_prob:
-            state = self.graph.getState()
-            filp = random.sample(range(self.graph.N), 3)
+            state = list(self.graph.getState())
+            flip = random.sample(range(self.graph.N), 3)
 
-            for f in filp:
+            for f in flip:
                 state[f] = 1 - state[f]
-                actions.remove(f)
+                if f in actions:
+                    actions.remove(f)
 
             self.graph.setState(state)
 

@@ -55,7 +55,7 @@ def _gen_predictor_sets_gene(gene_data, n_samples, n_predictors, k, gene):
     )
 
     # All possible predictor combinations - O(k * (n choose k))
-    for i, combination in enumerate(itertools.combinations(remaining_genes_idx, k)):
+    for _, combination in enumerate(itertools.combinations(remaining_genes_idx, k)):
         n_genes = len(combination)
         comb_gene_states = remaining_genes_states[list(combination)]
 
@@ -68,7 +68,7 @@ def _gen_predictor_sets_gene(gene_data, n_samples, n_predictors, k, gene):
             x = states.T.reshape(-1, n_genes, 1)
             x_combos = np.append(x_combos, x, axis=2)
 
-        for _exp in gene_states:
+        for _, _exp in enumerate(gene_states):
             _y = np.expand_dims(_exp, axis=1)
             for state_combo_idx in range(x_combos.shape[2]):
                 x = x_combos[:, :, state_combo_idx]
@@ -82,8 +82,7 @@ def add_to_buff(buff, data):
     n_predictors = buff.shape[1]
     COD, _, _ = data
 
-    i = 0
-    while i < n_predictors - 1:
+    for i in range(n_predictors):
         # If there's an empty slot in the buffer
         if buff[0, i] is None:
             buff[:, i] = data  # Just add it
@@ -91,16 +90,15 @@ def add_to_buff(buff, data):
         elif buff[0, i] < COD:  # If this is a better predictor
             temp = np.copy(buff[:, i])  # Copy existing data
             buff[:, i] = data  # Overwrite
-            while i < n_predictors - 1:  # Move everything to the right
-                temp2 = np.copy(buff[:, i + 1])
-                buff[:, i + 1] = temp
+
+            # while i < n_predictors - 1:
+            # Move everything to the right
+            for j in range(i, n_predictors - 1):
+                temp2 = np.copy(buff[:, j + 1])
+                buff[:, j + 1] = temp
                 temp = temp2
-                i += 1
+
             break
-        else:  # Else go next
-            i += 1
-            # if i < n_predictors - 2:
-            #     break
 
 
 def gen_COD(X, Y):

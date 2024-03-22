@@ -12,9 +12,14 @@ def logic_funcs_to_PBN_data(nodes: List[str], node_functions: List[Tuple[str, in
 
     for i, node in enumerate(nodes):
         # Input Mask
+        print(f' logic fun for node {i}')
         input_mask = np.zeros(len(nodes), dtype=bool)
+        if len(node_functions[i]) > 1:
+            print(node_functions)
+            raise ValueError
+
         for function, _ in node_functions[i]:
-            symbols = logic_eval.get_symbols(function)
+            symbols = logic_eval.get_symbols(i, function)
             for symbol in symbols:
                 j = nodes.index(symbol)
                 input_mask[j] = True
@@ -29,7 +34,7 @@ def logic_funcs_to_PBN_data(nodes: List[str], node_functions: List[Tuple[str, in
                 logic_eval.dictionary = {
                     node: value for node, value in zip(input_nodes, state)
                 }
-                value = int(logic_eval.evaluate(function))
+                value = int(logic_eval.evaluate(i, function))
                 if value == 1:
                     # truth_thable[state] = P(node == 1 | state)
                     truth_table[state] += prob

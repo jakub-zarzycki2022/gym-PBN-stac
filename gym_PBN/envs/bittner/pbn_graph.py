@@ -33,6 +33,7 @@ class PBNGraph(Graph):
         pbn_data = logic_funcs_to_PBN_data(self.genes, logic_functions)
 
         for i, data in enumerate(pbn_data):
+            print(f'  spawning node {i}')
             self.nodes.append(PBNNode(i, data, self.genes))
 
     def step(self, changed_nodes: list = None, i=None):

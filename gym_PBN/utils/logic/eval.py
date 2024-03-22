@@ -27,6 +27,7 @@ TokenDic = {'and': TokenType.LOGIC_AND, 'or': TokenType.LOGIC_OR,
 
 TokenDicRev = {value: key for key, value in TokenDic.items()}
 
+token_cache = {}
 
 #: Precedence value dictionary for postfix conversion
 Precedence = {TokenType.LOGIC_NOT: 20, TokenType.LOGIC_AND: 11,
@@ -44,7 +45,7 @@ class ExpressionToken:
         self.value = value
 
 
-class LogicExpressionEvaluator():
+class LogicExpressionEvaluator:
     #: Dictionary for symbol evaluation
     dictionary = {}
 
@@ -52,9 +53,14 @@ class LogicExpressionEvaluator():
         self.dictionary = role_dict
 
     @classmethod
-    def _tokenize(cls, in_str):
+    def _tokenize(cls, id, in_str):
         """Tokenize the input string"""
         tokens = []
+
+        if id in token_cache:
+            return token_cache[id]
+
+        print(in_str)
 
         # Remove whitespace and do basic tokenization
         in_str: list[str] = in_str.split()
@@ -95,6 +101,7 @@ class LogicExpressionEvaluator():
             else:
                 raise Exception(f'Illegal token {token}')
 
+        token_cache[id] = tokens
         return tokens
 
     def _convert_to_postfix(self, tokens):
@@ -137,15 +144,15 @@ class LogicExpressionEvaluator():
         return self.dictionary[symbol]
 
     @classmethod
-    def get_symbols(cls, in_str):
-        tokens = cls._tokenize(in_str)
+    def get_symbols(cls, id, in_str):
+        tokens = cls._tokenize(id, in_str)
         return [token.value for token in tokens if token.type == TokenType.SYMBOL and token.value not in [TokenDicRev[TokenType.LOGIC_HIGH], TokenDicRev[TokenType.LOGIC_LOW]]]
 
-    def evaluate(self, in_str):
+    def evaluate(self, id, in_str):
         """Evaluate string expression"""
         if not in_str:
             raise Exception('Empty expression string')
-        tokens = self._convert_to_postfix(self._tokenize(in_str))
+        tokens = self._convert_to_postfix(self._tokenize(id, in_str))
         stack = deque()
         result = False
         for token in tokens:

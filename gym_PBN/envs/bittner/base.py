@@ -93,6 +93,7 @@ class Node:
 
         # choose predictor
         r = random.random() * self.CODsum
+        IDs, A, COD = self.predictors[0]
         for IDs, A, COD in self.predictors:
             if COD > r:
                 break

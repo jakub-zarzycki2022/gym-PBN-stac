@@ -107,7 +107,8 @@ class PBNControlMultiEnv(gym.Env):
         new_state = list(self.get_state())
         for node, value in zip(self.control_nodes, actions):
             new_state[node] = value
-            self.graph.setState(new_state)
+
+        self.graph.setState(new_state)
 
         observation = self.graph.getState()
         self.graph.step()
@@ -283,7 +284,7 @@ class PBNControlMultiEnv(gym.Env):
         self.setTarget([[0] * self.N])
 
         steps = 10**3
-        min_attractors = 1
+        min_attractors = self.min_attractors
 
         print(f"Calculating state statistics for N = {self.N}")
         print(f"running simulations. {steps} steps each")

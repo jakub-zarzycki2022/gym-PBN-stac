@@ -34,6 +34,7 @@ class ControlPBNEnv(PBNControlMultiEnv):
 
         graph = PBNGraph(genes, logic_functions)
         print('got graph')
+        self.path = f"attractors/{self.N}_control_func_attractors.pkl"
 
         super().__init__(
             graph,

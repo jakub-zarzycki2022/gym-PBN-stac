@@ -12,7 +12,7 @@ def logic_funcs_to_PBN_data(nodes: List[str], node_functions: List[Tuple[str, in
 
     for i, node in enumerate(nodes):
         # Input Mask
-        print(f' logic fun for node {i}')
+        # print(f' logic fun for node {i}')
         input_mask = np.zeros(len(nodes), dtype=bool)
         if len(node_functions[i]) > 1:
             print(node_functions)
@@ -42,5 +42,6 @@ def logic_funcs_to_PBN_data(nodes: List[str], node_functions: List[Tuple[str, in
         control = sum(input_mask) == 0
 
         PBN_data.append((input_mask, truth_table, node, control))
+        # print("pbn data append: ", (input_mask, truth_table, node, control))
 
     return PBN_data

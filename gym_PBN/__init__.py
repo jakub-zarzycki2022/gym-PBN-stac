@@ -2,6 +2,9 @@ from gymnasium import register
 
 register(id="gym-PBN/PBNEnv-v0", entry_point="gym_PBN.envs:PBNEnv")
 
+register(id="gym-PBN/ControlPBNEnv-v0", entry_point="gym_PBN.envs:ControlPBNEnv")
+
+
 register(id="gym-PBN/PBN-target-v0", entry_point="gym_PBN.envs:PBNTargetEnv")
 
 register(
@@ -129,6 +132,13 @@ register(
 register(
     id="gym-PBN/BittnerMultiGeneral-v0",
     entry_point="gym_PBN.envs:BittnerMultiGeneral",
+    nondeterministic=True,
+    max_episode_steps=100,
+)
+
+register(
+    id="gym-PBN/BittnerControlGeneral-v0",
+    entry_point="gym_PBN.envs:BittnerControlGeneral",
     nondeterministic=True,
     max_episode_steps=100,
 )

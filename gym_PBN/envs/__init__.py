@@ -26,4 +26,8 @@ from gym_PBN.envs.pbn_target_multi import (
     BittnerMultiGeneral,
 )
 
+from gym_PBN.envs.pbn_control_multi import BittnerControlGeneral, PBNControlMultiEnv
+
+from gym_PBN.envs.control_pbn_env import ControlPBNEnv
+
 from gym_PBN.envs.pbn_gtex import PBNGTEx

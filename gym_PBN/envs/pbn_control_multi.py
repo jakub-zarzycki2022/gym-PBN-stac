@@ -5,7 +5,6 @@ from itertools import product
 from pathlib import Path
 from typing import List, Set, Tuple, Union
 import pickle as pkl
-from scipy.stats import poisson, uniform
 
 import gymnasium as gym
 import networkx as nx
@@ -27,17 +26,7 @@ def state_equals(state1, state2):
     return True
 
 
-def truncated_poisson(N):
-    mu = 3
-    out = N + 1
-
-    while out > N:
-        out = poisson.rvs(mu)
-
-    return out
-
-
-class PBNTargetMultiEnv(gym.Env):
+class PBNControlMultiEnv(gym.Env):
     metadata = {
         "render_modes": ["human", "dict", "PBN", "STG", "idx", "float", "target"]
     }
@@ -52,6 +41,7 @@ class PBNTargetMultiEnv(gym.Env):
         end_episode_on_success: bool = False,
         horizon: int = 100,
         min_attractors=6,
+        control_nodes=None,
     ):
         self.target = None
         self.graph = graph
@@ -65,7 +55,6 @@ class PBNTargetMultiEnv(gym.Env):
         self.observation_space = MultiBinary(self.graph.N)
         # intervention nodes + no action
         print("\nhello\n")
-        self.action_space = MultiDiscrete(self.graph.N + 1)
         self.name = name
         self.render_mode = render_mode
         self.render_no_cache = render_no_cache
@@ -87,56 +76,24 @@ class PBNTargetMultiEnv(gym.Env):
         self.target_state = None
         self.initial_state_id = -1
         self.target_state_id = -1
-        self.recent_actions = defaultdict(lambda: 10)
 
         self.target_attractor_id, self.state_attractor_id = -1, -1
         self.min_attractors = min_attractors
 
-    def _seed(self, seed: int = None):
-        np.random.seed(seed)
-        random.seed(seed)
+        if control_nodes is None:
+            raise ValueError("Set of control nodes cannot be None")
 
-    def _check_config(
-        self,
-        config: dict,
-        _type: str,
-        required_keys: Set[str],
-        default_values: dict = None,
-    ) -> dict:
-        """Small utility function to validate an environment config.
+        self.control_nodes = control_nodes
+        self.action_space = MultiDiscrete(len(self.control_nodes))
 
-        Args:
-            config (dict): The config to validate.
-            _type (str): The type of config this is about. Just needs to be a semantically rich string for the exception output.
-            required_keys (Set[str]): The mandatory keys that need to be in the config.
-            default_values (dict, optional): The default values for the config should it be empty. Defaults to None.
-
-        Raises:
-            ValueError: Thrown when some or all of the required keys are missing in the given config values.
-
-        Returns:
-            dict: The config after it has been checked and initialized to default values if it was empty to begin with.
-        """
-        # if config:
-        #     missing_keys = required_keys - set(config.keys())
-        #     if len(missing_keys) > 1:  # If any of the required keys are missing
-        #         raise ValueError(
-        #             f"Invalid {_type} config provided. The following required values are missing: {', '.join(missing_keys)}."
-        #         )
-        # else:
-        #     config = default_values
-
-        return config
-
-    def step(self, actions, force=False , perturbation_prob=0.0):
+    def step(self, actions, force=False, perturbation_prob=0.0):
         if not isinstance(actions, list):
             actions = actions.unique().tolist()
 
         # perturbation:
         if random.random() < perturbation_prob:
             state = list(self.graph.getState())
-            perturbation_size = truncated_poisson(len(state))
-            flip = random.sample(range(self.graph.N), perturbation_size)
+            flip = random.sample(range(self.graph.N), 3)
 
             for f in flip:
                 state[f] = 1 - state[f]
@@ -147,13 +104,10 @@ class PBNTargetMultiEnv(gym.Env):
 
         self.n_steps += 1
 
-        for action in actions:
-            if action != 0:  # Action 0 is taking no action.
-                self.graph.flipNode(action - 1)
-                self.recent_actions[action - 1] -= 1
-
-                if self.recent_actions[action - 1] == 0:
-                    self.recent_actions.pop(action - 1)
+        new_state = list(self.get_state())
+        for node, value in zip(self.control_nodes, actions):
+            new_state[node] = value
+            self.graph.setState(new_state)
 
         observation = self.graph.getState()
         self.graph.step()
@@ -268,12 +222,6 @@ class PBNTargetMultiEnv(gym.Env):
         state = list(random.choice(state_attractor))
         target = list(random.choice(target_attractor))
 
-        # for i in range(len(state)):
-        #     if state[i] == "*":
-        #         state[i] = random.randint(0, 1)
-        #     if target[i] == "*":
-        #         target[i] = random.randint(0, 1)
-
         self.graph.setState(state)
 
         self.n_steps = 0
@@ -325,23 +273,6 @@ class PBNTargetMultiEnv(gym.Env):
             state = list(state.values())
         return int("".join([str(x) for x in state]), 2)
 
-    def compute_attractors(self):
-        print("Computing attractors...")
-        STG = self.render(mode="STG")
-        generator = nx.algorithms.components.attracting_components(STG)
-        return self._nx_attractors_to_tuples(list(generator))
-
-    def _nx_attractors_to_tuples(self, attractors):
-        return [
-            set(
-                [
-                    tuple([int(x) for x in state.lstrip("[").rstrip("]").split()])
-                    for state in list(attractor)
-                ]
-            )
-            for attractor in attractors
-        ]
-
     def close(self):
         """Close out the environment and make sure everything is garbage collected."""
         del self.graph
@@ -388,17 +319,6 @@ class PBNTargetMultiEnv(gym.Env):
         state = tuple(state)
 
         return state in self.attracting_states
-
-        # for attractor in self.all_attractors:
-        #     for a_state in attractor:
-        #         for i in range(len(state)):
-        #             if a_state[i] == '*':
-        #                 continue
-        #             if a_state[i] != state[i]:
-        #                 break
-        #         else:
-        #             return True
-        # return False
 
     def get_labels(self, state):
         nodes = self.graph.nodes
@@ -468,69 +388,16 @@ class PBNTargetMultiEnv(gym.Env):
         return unlabeled_state
 
 
-class BittnerMulti70(PBNTargetMultiEnv):
+class BittnerControlGeneral(PBNControlMultiEnv):
     predictor_sets_path = Path(__file__).parent / "bittner" / "data"
     genedata = predictor_sets_path / "genedata.xls"
 
     includeIDs = [234237, 324901, 759948, 25485, 266361, 108208, 130057]
-
-    N = 70
-    NAME = "Bittner-70"
-
-    def __init__(
-        self,
-        render_mode: str = "human",
-        render_no_cache: bool = False,
-        name: str = None,
-        horizon: int = 69,
-        reward_config: dict = None,
-        end_episode_on_success: bool = True,
-    ):
-        print("DEPRECATED")
-        raise ValueError
-        print(f"its me, bittner-{self.N}")
-        if not name:
-            name = self.NAME
-
-        goal_config = {
-            "target_nodes": [234237, 324901, 759948, 25485, 266361, 108208, 130057],
-            "intervene_on": [234237],
-            "target_node_values": ((0, 0, 0, 0, 0, 0, 0),),
-            "undesired_node_values": tuple(),
-            "horizon": horizon,
-        }
-        super().__init__(
-            graph,
-            goal_config,
-            render_mode,
-            render_no_cache,
-            name,
-            reward_config,
-            end_episode_on_success,
-        )
-
-
-class BittnerMulti100(BittnerMulti70):
-    N = 100
-    NAME = "Bittner-100"
-
-
-class Bittner200(BittnerMulti70):
-    N = 200
-    NAME = "Bittner-200"
-
-
-class BittnerMulti7(PBNTargetMultiEnv):
-    predictor_sets_path = Path(__file__).parent / "bittner" / "data"
-    genedata = predictor_sets_path / "genedata.xls"
-
-    includeIDs = [234237, 324901, 759948, 25485, 266361, 108208, 130057]
-
-    N = 7
-    NAME = "Bittner-7"
+    NAME = "Bittner-NONE"
 
     def __init__(
             self,
+            N,
             render_mode: str = "human",
             render_no_cache: bool = False,
             name: str = None,
@@ -547,6 +414,7 @@ class BittnerMulti7(PBNTargetMultiEnv):
 
         self.includeIDs = sorted(self.includeIDs)
         self.n_predictors = n_predictors
+        self.N = N
 
         graph = utils.spawn(
             file=self.genedata,
@@ -578,10 +446,6 @@ class BittnerMulti7(PBNTargetMultiEnv):
         self.min_attractors = min_attractors
         print("Single episode horizon is ", self.horizon)
 
-        # if using statistical_attractors
-        remember = False
-        # self.real_attractors = get_attractors(self)
-        # print("from cabean ", len(self.real_attractors))
         self.path = f"attractors/{self.N}_{self.n_predictors}_attractors.pkl"
         try:
             print(f"try to load: \n{self.path}")
@@ -600,67 +464,3 @@ class BittnerMulti7(PBNTargetMultiEnv):
         self.probabilities = [1 / self.attractor_count] * self.attractor_count
 
         print(self.all_attractors)
-
-        # self.target_nodes = sorted(self.includeIDs)
-        # self.target_node_values = self.all_attractors[-1]
-
-
-class BittnerMulti10(BittnerMulti7):
-    N = 10
-    NAME = "BittnerMulti-10"
-
-
-class BittnerMulti20(BittnerMulti7):
-    N = 20
-    NAME = "BittnerMulti-20"
-
-
-class BittnerMulti25(BittnerMulti7):
-    N = 25
-    NAME = "BittnerMulti-25"
-
-
-class BittnerMulti30(BittnerMulti7):
-    N = 30
-    NAME = "BittnerMulti-30"
-
-
-class BittnerMulti50(BittnerMulti7):
-    N = 50
-    NAME = "BittnerMulti-50"
-
-
-class BittnerMultiGeneral(BittnerMulti7):
-    def __init__(self, N, horizon=100, min_attractors=3):
-        self.N = N
-        self.NAME = f"BittnerMulti-{N}"
-
-        # special case for consistency with CABEAN
-        if N == 28:
-            includeIDs = [234237, 324901, 759948, 25485, 324700, 43129, 266361, 108208, 40764, 130057, 39781, 49665,
-                          39159, 23185, 417218, 31251, 343072, 142076, 128100, 376725, 112500, 241530, 44563, 36950,
-                          812276, 51018, 306013, 418105]
-            self.includeIDs = sorted(includeIDs)
-
-        super().__init__(horizon=horizon, min_attractors=min_attractors)
-
-
-class BittnerMulti28(BittnerMulti7):
-    N = 28
-    NAME = "BittnerMulti-28"
-    def __init__(
-            self,
-            render_mode: str = "human",
-            render_no_cache: bool = False,
-            name: str = "Bittner-28",
-            horizon: int = 100,
-            end_episode_on_success: bool = False,
-    ):
-        includeIDs = [234237, 324901, 759948, 25485, 324700, 43129, 266361, 108208, 40764, 130057, 39781, 49665, 39159,
-                      23185, 417218, 31251, 343072, 142076, 128100, 376725, 112500, 241530, 44563, 36950, 812276, 51018,
-                      306013, 418105]
-
-        includeIDs = sorted(includeIDs)
-
-        self.includeIDs = includeIDs
-        super().__init__()

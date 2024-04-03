@@ -43,3 +43,22 @@ class PBNGraph(Graph):
         #     i = random.randint(0, len(self.nodes) - 1)
         self.nodes[i].step(oldState)
         return self.getState()
+
+    def get_adj_list(self):
+        top_nodes = []
+        bot_nodes = []
+
+        for top_node in self.nodes:
+            done = set()
+            top_nodes.append(top_node.index)
+            bot_nodes.append(top_node.index)
+
+            # print(top_node.predictors)
+
+            for bot_node_id in top_node.predictors:
+                if bot_node_id not in done:
+                    done.add(bot_node_id)
+                    top_nodes.append(top_node.index)
+                    bot_nodes.append(bot_node_id)
+
+        return [top_nodes, bot_nodes]

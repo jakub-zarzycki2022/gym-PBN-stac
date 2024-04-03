@@ -51,6 +51,7 @@ class PBNGTEx(PBNTargetMultiEnv):
         name: str = NAME,
         horizon: int = 100,
         end_episode_on_success: bool = True,
+        min_attractors=3,
     ):
         self.N = N
         print(f"its me, gtex-{self.N}")
@@ -60,6 +61,7 @@ class PBNGTEx(PBNTargetMultiEnv):
         df = pd.read_excel(io='~/Downloads/pnas.1722609115.sd02.xlsx')
         df.fillna('', inplace=True)
         graph = graph_from_predictors(df)
+        self.path = f"attractors/{self.N}_1_attractors.pkl"
 
         super().__init__(
             graph,
@@ -69,6 +71,7 @@ class PBNGTEx(PBNTargetMultiEnv):
             name,
             None,
             end_episode_on_success,
+            min_attractors=min_attractors
         )
 
         self.all_attractors = [[s] for s in self.statistical_attractors()]
@@ -77,41 +80,6 @@ class PBNGTEx(PBNTargetMultiEnv):
         self.probabilities = [1 / self.attractor_count] * self.attractor_count
 
         print(self.all_attractors)
-
-        # self.target_nodes = sorted(self.includeIDs)
-        # self.target_node_values = self.all_attractors[-1]
-
-    def statistical_attractors(self):
-        print(f"Calculating state statistics for N = {self.N}")
-        print(f"it should take {10 ** 4} steps")
-        state_log = defaultdict(int)
-
-        self.setTarget([[0] * self.N])
-
-        steps = 1000
-        simulations = 10 ** 4
-        for i in range(simulations):
-            if i % 10 ** 3 == 0:
-                print(i)
-            s = [random.randint(0, 1) for _ in range(self.N)]
-            self.graph.setState(s)
-            for j in range(steps):
-                state = tuple(self.render())
-                state_log[state] += 1
-                _ = self.step([], force=True)
-
-        states = sorted(state_log.items(), key=lambda kv: kv[1], reverse=True)
-
-        statistial_attractors = [node for node, frequency in states if frequency > 0.15 * steps * simulations]
-
-        if len(statistial_attractors) < 10:
-            statistial_attractors = [node for node, frequency in states if frequency > 1000]
-
-        if len(statistial_attractors) < 10:
-            statistial_attractors = [node for node, frequency in states[:10]]
-
-        print(f"got {statistial_attractors}")
-        return statistial_attractors
 
     def is_attracting_state(self, state):
         state = tuple(state)

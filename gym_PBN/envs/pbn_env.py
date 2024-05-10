@@ -56,6 +56,7 @@ class PBNEnv(PBNTargetMultiEnv):
             with open(self.path, "wb+") as f:
                 pickle.dump(self.all_attractors, f)
         # self.all_attractors = [[s] for s in self.statistical_attractors()]
+        # self.all_attractors = [[s] for s in self.statistical_attractors()]
         self.attracting_states.update([s[0] for s in self.all_attractors])
 
         self.attractor_count = len(self.all_attractors)

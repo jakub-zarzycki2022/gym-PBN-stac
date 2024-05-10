@@ -224,7 +224,6 @@ class PBNTargetMultiEnv(gym.Env):
     def in_target(self, observation):
         return tuple(observation) in self.target
 
-
     def _get_reward(self, observation: STATE, actions) -> Tuple[REWARD, TERMINATED, TRUNCATED]:
 
         if not isinstance(actions, list):
@@ -239,7 +238,7 @@ class PBNTargetMultiEnv(gym.Env):
         Returns:
             Tuple[REWARD, TERMINATED, TRUNCATED]: Tuple of the reward and the environment done status.
         """
-        reward, terminated = +3, False
+        reward, terminated = -100, False
         observation = tuple(observation)
 
         reward -= 1 * len(actions)
@@ -352,9 +351,11 @@ class PBNTargetMultiEnv(gym.Env):
         print(f"Calculating state statistics for N = {self.N}")
         print(f"running simulations. {steps} steps each")
         statistial_attractors = set()
+        longest_path_len = 0
+        longest_path = None
 
         i = -1
-        while len(statistial_attractors) < min_attractors:
+        while len(statistial_attractors) > 0.1 * i:
             i += 1
             state_log = defaultdict(int)
             print(i)
@@ -376,7 +377,35 @@ class PBNTargetMultiEnv(gym.Env):
             frequencies = sorted([frequency for node, frequency in states], reverse=True)[:10]
             print(f"(10%) calculating using {frequencies}. Got {len(statistial_attractors)}")
 
-        print(f"got {len(statistial_attractors)}")
+            if len(states) > longest_path_len:
+                longest_path_len = len(states)
+                longest_path = states
+
+        # print(f"got {len(statistial_attractors)}")
+        print(f"longest path is {longest_path} of length {longest_path_len}")
+
+        counter = 0
+        failed_attractors = set()
+
+        for _ in range(1):
+            print(f"testing {len(statistial_attractors)} attractors")
+
+            for attractor in statistial_attractors:
+                self.graph.setState(attractor)
+                for _ in range(10):
+                    s = sum([self.step([0])[0][k] - attractor[k] for k in range(self.N)])
+                    if s == 0:
+                        print(f"attracor {i} is fine")
+                        break
+                else:
+                    print(f"failed on attractor {i}")
+                    failed_attractors.add(attractor)
+                    counter += 1
+
+        print(f"{len(failed_attractors)} states removed ({len(failed_attractors) / len(statistial_attractors) * 100}%)")
+        statistial_attractors = statistial_attractors.difference(failed_attractors)
+        print(f"{len(statistial_attractors)}")
+
         return statistial_attractors
 
     def is_attracting_state(self, state):
@@ -583,7 +612,7 @@ class BittnerMulti7(PBNTargetMultiEnv):
         self.attractor_count = len(self.all_attractors)
         self.probabilities = [1 / self.attractor_count] * self.attractor_count
 
-        print(f"all attrtactors are: {len(self.all_attractors)}")
+        # print(f"all attrtactors are: {len(self.all_attractors)}")
 
         # self.target_nodes = sorted(self.includeIDs)
         # self.target_node_values = self.all_attractors[-1]

@@ -18,6 +18,7 @@ from .bittner import base, utils
 from .bittner.base import findAttractors
 
 from gym_PBN.utils.get_attractors_from_cabean import get_attractors
+from gym_PBN.utils.get_cabean_model import get_cnet, parse_cnet
 
 
 def state_equals(state1, state2):
@@ -350,9 +351,12 @@ class PBNTargetMultiEnv(gym.Env):
 
         print(f"Calculating state statistics for N = {self.N}")
         print(f"running simulations. {steps} steps each")
-        statistial_attractors = set()
         longest_path_len = 0
         longest_path = None
+
+        get_cnet(self)
+        statistial_attractors = parse_cnet()
+        print(statistial_attractors)
 
         i = -1
         while len(statistial_attractors) > 0.1 * i:
@@ -405,6 +409,7 @@ class PBNTargetMultiEnv(gym.Env):
         print(f"{len(failed_attractors)} states removed ({len(failed_attractors) / len(statistial_attractors) * 100}%)")
         statistial_attractors = statistial_attractors.difference(failed_attractors)
         print(f"{len(statistial_attractors)}")
+        print(statistial_attractors)
 
         return statistial_attractors
 
@@ -551,7 +556,7 @@ class BittnerMulti7(PBNTargetMultiEnv):
             reward_config: dict = None,
             end_episode_on_success: bool = True,
             min_attractors=3,
-            n_predictors=3
+            n_predictors=1
     ):
         if not name:
             name = self.NAME
@@ -595,7 +600,7 @@ class BittnerMulti7(PBNTargetMultiEnv):
         remember = False
         # self.real_attractors = get_attractors(self)
         # print("from cabean ", len(self.real_attractors))
-        self.path = f"attractors/{self.N}_{self.n_predictors}_attractors.pkl"
+        self.path = f"bns_attractors/{self.N}_{self.n_predictors}_attractors.pkl"
         try:
             print(f"try to load: \n{self.path}")
             with open(self.path, "rb") as f:

@@ -36,6 +36,27 @@ def translate(logic_function):
     res = " ".join(tokens)
     return res
 
+def get_truth_tables(g):
+    truth_tables = defaultdict(list)
+
+    for node in g.nodes:
+        predictors = node.predictors
+
+        for predictor in predictors:
+            IDs, A, _ = predictor
+            num_genes = len(IDs)
+
+            # matrix of # of len(state) + 1 x # of states
+            truth_table = np.zeros((num_genes + 1 + 1, 2 ** (num_genes + 1)))
+            for j, state in enumerate(product([0, 1], repeat=num_genes + 1)):
+                x = np.ones(num_genes + 1)
+                for i in range(len(state)):
+                    x[i] = state[i]
+                    truth_table[i][j] = state[i]
+                truth_table[num_genes + 1][j] = 1 if np.dot(x, A) >= 0 else 0
+
+            truth_tables[node.ID].append((IDs, truth_table))
+    return truth_tables
 
 def get_model(env):
     model_out_path = f"kaban/results/model_{env.name}.out"
@@ -51,26 +72,7 @@ def get_model(env):
         autoescape=select_autoescape()
     )
 
-    truth_tables = defaultdict(list)
-
-    for node in g.nodes:
-        predictors = node.predictors
-
-        for predictor in predictors:
-            IDs, A, _ = predictor
-            num_genes = len(IDs)
-
-            # matrix of # of len(state) + 1 x # of states
-            truth_table = np.zeros((num_genes + 1 + 1, 2 ** (num_genes + 1)))
-            for j, state in enumerate(product([0, 1], repeat=num_genes+1)):
-                x = np.ones(num_genes + 1)
-                for i in range(len(state)):
-                    x[i] = state[i]
-                    truth_table[i][j] = state[i]
-                truth_table[num_genes+1][j] = 1 if np.dot(x, A) >= 0 else 0
-
-            truth_tables[node.ID].append((IDs, truth_table))
-
+    truth_tables = get_truth_tables(g)
     log_funcs = defaultdict(list)
 
     for gen in truth_tables:
@@ -107,3 +109,42 @@ def get_model(env):
         f.write(out.stdout)
 
     return out.stdout
+
+
+def get_cnet(env, model_out="model.cnet"):
+    g = env.graph
+
+    truth_tables = get_truth_tables(g)
+
+    gen_map = defaultdict(str)
+
+    i = 1
+    for gen in truth_tables:
+        gen_map[gen] = i
+        i += 1
+
+    print(gen_map)
+    with open(model_out, "w+") as f:
+        f.write(f".v {env.N}\n")
+        for gen in truth_tables:
+            f.write(f".n {gen_map[gen]} 4 ")
+            for pred in truth_tables[gen][0][0]:
+                f.write(f"{gen_map[pred]} ")
+            f.write(f"{gen_map[gen]} \n")
+
+            for column in range(len(truth_tables[gen][0][1][0])):
+                for row in range(4):
+                    f.write(f"{int(truth_tables[gen][0][1][row][column])}")
+                f.write(f" {int(truth_tables[gen][0][1][4][column])}\n")
+
+
+def parse_cnet(model="model.cnet"):
+    attrs = set()
+    out = subprocess.run(["./bns", '-l', '1', model], capture_output=True, encoding='utf-8')
+    i = 0
+    for line in out.stdout.split('\n')[:-2]:
+        i += 1
+        if i % 2:
+            continue
+        attrs.add(tuple(int(x) for x in line))
+    return attrs

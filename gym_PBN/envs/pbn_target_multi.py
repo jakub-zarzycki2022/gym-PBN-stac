@@ -20,6 +20,8 @@ from .bittner.base import findAttractors
 from gym_PBN.utils.get_attractors_from_cabean import get_attractors
 from gym_PBN.utils.get_cabean_model import get_cnet, parse_cnet
 
+from copy import deepcopy
+
 
 def state_equals(state1, state2):
     for x, y in zip(state1, state2):
@@ -354,8 +356,8 @@ class PBNTargetMultiEnv(gym.Env):
         longest_path_len = 0
         longest_path = None
 
-        get_cnet(self)
-        statistial_attractors = parse_cnet()
+        # get_cnet(self)
+        statistial_attractors = set() # parse_cnet()
         print(statistial_attractors)
 
         i = -1
@@ -390,28 +392,49 @@ class PBNTargetMultiEnv(gym.Env):
 
         counter = 0
         failed_attractors = set()
+        good_attractors = set()
 
-        for _ in range(1):
-            print(f"testing {len(statistial_attractors)} attractors")
+        for attractor in statistial_attractors:
+            if attractor in good_attractors:
+                continue
 
-            for attractor in statistial_attractors:
-                self.graph.setState(attractor)
-                for _ in range(10):
-                    s = sum([self.step([0])[0][k] - attractor[k] for k in range(self.N)])
-                    if s == 0:
-                        print(f"attracor {i} is fine")
-                        break
-                else:
-                    print(f"failed on attractor {i}")
-                    failed_attractors.add(attractor)
-                    counter += 1
+            dfs_attractor = self.dfs_check_attractor(attractor)
+
+            if dfs_attractor is None:
+                continue
+
+            good_attractors = good_attractors.union(dfs_attractor)
 
         print(f"{len(failed_attractors)} states removed ({len(failed_attractors) / len(statistial_attractors) * 100}%)")
-        statistial_attractors = statistial_attractors.difference(failed_attractors)
+        statistial_attractors = list(good_attractors)
         print(f"{len(statistial_attractors)}")
         print(statistial_attractors)
 
         return statistial_attractors
+
+    def dfs_check_attractor(self, initial_state):
+        graph = deepcopy(self.graph)
+
+        states_to_check = [initial_state]
+        all_states = {initial_state}
+
+        limit = 1024
+
+        while len(states_to_check) > 0:
+            state = states_to_check.pop()
+            graph.setState(state)
+            next_states = graph.getNextStates().keys()
+
+            for s in next_states:
+                if s not in all_states:
+                    states_to_check.append(s)
+                    all_states.add(s)
+
+            if len(all_states) > limit:
+                return None
+
+        return all_states
+
 
     def is_attracting_state(self, state):
         state = tuple(state)

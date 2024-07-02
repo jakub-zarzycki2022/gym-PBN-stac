@@ -180,14 +180,16 @@ class PBNTargetMultiEnv(gym.Env):
 
                 # type I pseudo-attractor
                 if returns_count > 1000:
-                    self.all_attractors.append([observation])
-                    self.attracting_states.add(observation)
-                    self.probabilities.append(0)
-                    self.rework_probas()
-                    with open(self.path, "wb+") as f:
-                        pickle.dump(self.all_attractors, f)
-                    break
-
+                    dfs_attractor = self.dfs_check_attractor(observation)
+                    if dfs_attractor is not None:
+                        for a in list(dfs_attractor):
+                            self.all_attractors.append([a])
+                            self.attracting_states.add(a)
+                            self.probabilities.append(0)
+                        self.rework_probas()
+                        with open(self.path, "wb+") as f:
+                            pickle.dump(self.all_attractors, f)
+                        break
             else:
                 returns_count = 0
 
@@ -199,11 +201,14 @@ class PBNTargetMultiEnv(gym.Env):
                 states = sorted(history.items(), key=lambda kv: kv[1], reverse=True)
                 new_attractors = [node for node, frequency in states if frequency > 1500]
 
-                for s in new_attractors:
-                    self.all_attractors.append([s])
-                    self.attracting_states.add(s)
-                    self.probabilities.append(0)
-
+                for observation in new_attractors:
+                    dfs_attractor = self.dfs_check_attractor(observation)
+                    if dfs_attractor is not None:
+                        for a in list(dfs_attractor):
+                            if a not in self.attracting_states:
+                                self.all_attractors.append([a])
+                                self.attracting_states.add(a)
+                                self.probabilities.append(0)
                 self.rework_probas()
                 step_count = 0
                 history = defaultdict(int)

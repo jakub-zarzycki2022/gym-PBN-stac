@@ -390,10 +390,7 @@ class PBNTargetMultiEnv(gym.Env):
 
         return statistial_attractors
 
-    # find connected component of STG containing initial_state
     def dfs_check_attractor(self, initial_state):
-        # initial_state = (0, 0, 0, 0, 0, 0, 0)
-        print('initial: ', initial_state)
         graph = deepcopy(self.graph)
 
         states_to_check = [initial_state]
@@ -401,16 +398,10 @@ class PBNTargetMultiEnv(gym.Env):
 
         limit = 1024
 
-        # forward DFS pass
         while len(states_to_check) > 0:
-            # print('states to check: \n    ', states_to_check)
             state = states_to_check.pop()
             graph.setState(state)
             next_states = graph.getNextStates().keys()
-
-            if state != initial_state:
-                if initial_state in next_states:
-                    print("initial ", initial_state, " is proceeded by ", state, "\n via: ", next_states)
 
             for s in next_states:
                 if s not in all_states:
@@ -420,28 +411,8 @@ class PBNTargetMultiEnv(gym.Env):
             if len(all_states) > limit:
                 return None
 
-        states_to_check = [initial_state]
-        back_states = set()
-
-        # backward DFS pass
-        while len(states_to_check) > 0:
-            # print('states to check: \n    ', states_to_check)
-            state = states_to_check.pop()
-            graph.setState(state)
-            ps = graph.getPrevStates(state)
-
-            for s in ps:
-                if s not in back_states:
-                    states_to_check.append(s)
-                    back_states.add(s)
-
-            if len(all_states) > limit:
-                return None
-
-        print('returning with ', len(all_states), " and ", len(back_states), ' states')
-        print(all_states.intersection(back_states))
-        # raise ValueError
         return all_states
+
 
     def is_attracting_state(self, state):
         state = tuple(state)

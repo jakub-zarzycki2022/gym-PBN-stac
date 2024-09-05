@@ -47,7 +47,6 @@ class PBNEnv(PBNTargetMultiEnv):
 
         try:
             print(f"try to load: \n{self.path}")
-            raise FileNotFoundError
             with open(self.path, "rb") as f:
                 attractors = pickle.load(f)
                 self.all_attractors = attractors

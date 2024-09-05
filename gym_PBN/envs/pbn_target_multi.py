@@ -246,13 +246,13 @@ class PBNTargetMultiEnv(gym.Env):
         Returns:
             Tuple[REWARD, TERMINATED, TRUNCATED]: Tuple of the reward and the environment done status.
         """
-        reward, terminated = -100, False
+        reward, terminated = -1000, False
         observation = tuple(observation)
 
         reward -= 1 * len(actions)
 
         if self.in_target(observation):
-            reward += 100
+            reward += 1000
             terminated = True
 
         truncated = self.n_steps == self.horizon
@@ -263,7 +263,7 @@ class PBNTargetMultiEnv(gym.Env):
         if seed:
             self._seed(seed)
 
-        self.target_attractor_id, self.state_attractor_id = np.random.choice(range(len(self.all_attractors)),
+        self.target_attractor_id, self.state_attractor_id = np.random.choice(range(min(100, len(self.all_attractors))),
                                                                              size=2,
                                                                              replace=False)
 
@@ -369,7 +369,6 @@ class PBNTargetMultiEnv(gym.Env):
         while len(statistial_attractors) > 0.1 * i:
             i += 1
             state_log = defaultdict(int)
-            print(i)
             s = [random.randint(0, 1) for _ in range(self.N)]
             self.graph.setState(s)
 
@@ -403,12 +402,18 @@ class PBNTargetMultiEnv(gym.Env):
             if attractor in good_attractors:
                 continue
 
-            dfs_attractor = self.dfs_check_attractor(attractor)
+            # dfs_attractor = self.dfs_check_attractor(attractor)
+            self.graph.setState(attractor)
+            for _ in range(200):
+                _ = self.step([], force=True)
+                if tuple(self.render()) == attractor:
+                    good_attractors.add(attractor)
+                    break
 
-            if dfs_attractor is None:
-                continue
+            # if dfs_attractor is None:
+            #     continue
 
-            good_attractors = good_attractors.union(dfs_attractor)
+            # good_attractors = good_attractors.union(dfs_attractor)
 
         print(f"{len(failed_attractors)} states removed ({len(failed_attractors) / len(statistial_attractors) * 100}%)")
         statistial_attractors = list(good_attractors)
@@ -584,7 +589,7 @@ class BittnerMulti7(PBNTargetMultiEnv):
             reward_config: dict = None,
             end_episode_on_success: bool = True,
             min_attractors=3,
-            n_predictors=1
+            n_predictors=3
     ):
         if not name:
             name = self.NAME
@@ -593,6 +598,7 @@ class BittnerMulti7(PBNTargetMultiEnv):
 
         self.includeIDs = sorted(self.includeIDs)
         self.n_predictors = n_predictors
+        self.used_genes = set()
 
         graph = utils.spawn(
             file=self.genedata,

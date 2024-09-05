@@ -16,7 +16,7 @@ def logic_funcs_to_PBN_data(nodes: List[str], node_functions: List[Tuple[str, in
         input_mask = np.zeros(len(nodes), dtype=bool)
         if len(node_functions[i]) > 1:
             print(node_functions)
-            raise ValueError
+            # raise ValueError
 
         for function, _ in node_functions[i]:
             symbols = logic_eval.get_symbols(i, function)

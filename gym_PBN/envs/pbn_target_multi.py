@@ -99,38 +99,6 @@ class PBNTargetMultiEnv(gym.Env):
         np.random.seed(seed)
         random.seed(seed)
 
-    def _check_config(
-        self,
-        config: dict,
-        _type: str,
-        required_keys: Set[str],
-        default_values: dict = None,
-    ) -> dict:
-        """Small utility function to validate an environment config.
-
-        Args:
-            config (dict): The config to validate.
-            _type (str): The type of config this is about. Just needs to be a semantically rich string for the exception output.
-            required_keys (Set[str]): The mandatory keys that need to be in the config.
-            default_values (dict, optional): The default values for the config should it be empty. Defaults to None.
-
-        Raises:
-            ValueError: Thrown when some or all of the required keys are missing in the given config values.
-
-        Returns:
-            dict: The config after it has been checked and initialized to default values if it was empty to begin with.
-        """
-        # if config:
-        #     missing_keys = required_keys - set(config.keys())
-        #     if len(missing_keys) > 1:  # If any of the required keys are missing
-        #         raise ValueError(
-        #             f"Invalid {_type} config provided. The following required values are missing: {', '.join(missing_keys)}."
-        #         )
-        # else:
-        #     config = default_values
-
-        return config
-
     def get_id(self, state):
         for i, attractor in enumerate(self.all_attractors):
             if state == attractor[0]:
@@ -363,7 +331,7 @@ class PBNTargetMultiEnv(gym.Env):
 
         # get_cnet(self)
         statistial_attractors = set() # parse_cnet()
-        print(statistial_attractors)
+        # print(statistial_attractors)
 
         i = -1
         while len(statistial_attractors) > 0.1 * i:
@@ -392,7 +360,7 @@ class PBNTargetMultiEnv(gym.Env):
                 longest_path = states
 
         # print(f"got {len(statistial_attractors)}")
-        print(f"longest path is {longest_path} of length {longest_path_len}")
+        # print(f"longest path is {longest_path} of length {longest_path_len}")
 
         counter = 0
         failed_attractors = set()
@@ -418,11 +386,14 @@ class PBNTargetMultiEnv(gym.Env):
         print(f"{len(failed_attractors)} states removed ({len(failed_attractors) / len(statistial_attractors) * 100}%)")
         statistial_attractors = list(good_attractors)
         print(f"{len(statistial_attractors)}")
-        print(statistial_attractors)
+        # print(statistial_attractors)
 
         return statistial_attractors
 
+    # find connected component of STG containing initial_state
     def dfs_check_attractor(self, initial_state):
+        # initial_state = (0, 0, 0, 0, 0, 0, 0)
+        print('initial: ', initial_state)
         graph = deepcopy(self.graph)
 
         states_to_check = [initial_state]
@@ -430,10 +401,16 @@ class PBNTargetMultiEnv(gym.Env):
 
         limit = 1024
 
+        # forward DFS pass
         while len(states_to_check) > 0:
+            # print('states to check: \n    ', states_to_check)
             state = states_to_check.pop()
             graph.setState(state)
             next_states = graph.getNextStates().keys()
+
+            if state != initial_state:
+                if initial_state in next_states:
+                    print("initial ", initial_state, " is proceeded by ", state, "\n via: ", next_states)
 
             for s in next_states:
                 if s not in all_states:
@@ -443,8 +420,28 @@ class PBNTargetMultiEnv(gym.Env):
             if len(all_states) > limit:
                 return None
 
-        return all_states
+        states_to_check = [initial_state]
+        back_states = set()
 
+        # backward DFS pass
+        while len(states_to_check) > 0:
+            # print('states to check: \n    ', states_to_check)
+            state = states_to_check.pop()
+            graph.setState(state)
+            ps = graph.getPrevStates(state)
+
+            for s in ps:
+                if s not in back_states:
+                    states_to_check.append(s)
+                    back_states.add(s)
+
+            if len(all_states) > limit:
+                return None
+
+        print('returning with ', len(all_states), " and ", len(back_states), ' states')
+        print(all_states.intersection(back_states))
+        # raise ValueError
+        return all_states
 
     def is_attracting_state(self, state):
         state = tuple(state)
@@ -642,6 +639,7 @@ class BittnerMulti7(PBNTargetMultiEnv):
                 self.all_attractors = attractors
         except FileNotFoundError:
             self.all_attractors = [[s] for s in self.statistical_attractors()]
+            print("all attrs: ", self.all_attractors)
             with open(self.path, "wb+") as f:
                 pickle.dump(self.all_attractors, f)
 

@@ -14,13 +14,15 @@ class PBNNode(Node):
         self.input_mask = input_mask
         self.truth_table = truth_table
 
-        self.predictors = []
+        predictor_genes = []
         for i in range(len(self.input_mask)):
             if self.input_mask[i]:
-                self.predictors.append(i)
+                predictor_genes.append(i)
+
+        self.predictors = [predictor_genes]
 
     def step(self, state, verbose=False):
-        relevant_nodes = tuple(state[i] for i in self.predictors)
+        relevant_nodes = tuple(state[i] for i in self.predictors[0])
         proba = self.truth_table[relevant_nodes]
         self.value = int(random.random() < proba)
         return self.value

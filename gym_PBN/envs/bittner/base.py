@@ -27,6 +27,7 @@ class Node:
         self.value = None
         self.predictors = []
         self.inputNodes = None
+        self.truth_table = None
 
     def add_predictors(self, predictors):
         IDstoPrint = []
@@ -222,16 +223,24 @@ class Graph:
     # async version of getNextStates
     def getNextStates(self, state=None):
         probs = []
+        state = self.getState() if state is None else state
         for node in self.nodes:
-            prob = node.getStateProbs(self.getLabeledState())
-            probs = probs + [prob]
+            if node.truth_table is None:
+                named_state = {node.ID: s for node, s in zip(self.nodes, state)}
+                prob = node.getStateProbs(named_state)[1]
+            else:
+                tt = node.truth_table
+                for i in node.predictors[0]:
+                    tt = tt[state[i]]
+                prob = tt
+            probs.append([1. - prob, prob])
 
         nextStates = defaultdict(float)
-        state = self.getState() if state is None else state
+
         for i in range(len(state)):
             nextState = list(state)
             prob = probs[i]
-#            print(prob)
+
             if prob[0] > 0.:
                 nextState[i] = 0
                 nextStates[tuple(nextState)] += prob[0] / len(state)
@@ -242,6 +251,23 @@ class Graph:
                 #print(f"{i} added {nextState} to {state}")
 
         return nextStates
+
+    def getPrevStates(self, state=None):
+        state = self.getState() if state is None else state
+        prev_states = set()
+
+        if state in self.getNextStates(state):
+            prev_states.add(state)
+
+        for i, node in enumerate(self.nodes):
+            state_list = list(state)
+            state_list[i] = 1 - state_list[i]
+            ns = self.getNextStates(state_list)
+
+            if state in ns.keys():
+                prev_states.add(tuple(state_list))
+
+        return prev_states
 
     # sync version of getNextStates
     def sync_getNextStates(self):

@@ -334,7 +334,7 @@ class PBNTargetMultiEnv(gym.Env):
         # print(statistial_attractors)
 
         i = -1
-        while len(statistial_attractors) > 0.1 * i:
+        while len(statistial_attractors) < min_attractors:
             i += 1
             state_log = defaultdict(int)
             s = [random.randint(0, 1) for _ in range(self.N)]
@@ -557,7 +557,7 @@ class BittnerMulti7(PBNTargetMultiEnv):
             reward_config: dict = None,
             end_episode_on_success: bool = True,
             min_attractors=3,
-            n_predictors=3
+            n_predictors=1
     ):
         if not name:
             name = self.NAME

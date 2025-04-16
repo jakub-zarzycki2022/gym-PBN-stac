@@ -94,6 +94,7 @@ class PBNTargetMultiEnv(gym.Env):
 
         self.target_attractor_id, self.state_attractor_id = -1, -1
         self.min_attractors = min_attractors
+        self.input_nodes = []
 
     def _seed(self, seed: int = None):
         np.random.seed(seed)
@@ -106,32 +107,22 @@ class PBNTargetMultiEnv(gym.Env):
 
         raise ValueError
 
+    def set_input_nodes(self, input_nodes):
+        self.input_nodes = input_nodes
+
     def step(self, actions, force=False, perturbation_prob=0.0):
         if not isinstance(actions, list):
             actions = actions.unique().tolist()
 
-        # perturbation:
-        if random.random() < perturbation_prob:
-            state = list(self.graph.getState())
-            perturbation_size = truncated_poisson(len(state))
-            flip = random.sample(range(self.graph.N), perturbation_size)
-
-            for f in flip:
-                state[f] = 1 - state[f]
-                if f in actions:
-                    actions.remove(f)
-
-            self.graph.setState(state)
-
         self.n_steps += 1
 
-        for action in actions:
-            if action != 0:  # Action 0 is taking no action.
-                self.graph.flipNode(action - 1)
-                self.recent_actions[action - 1] -= 1
+        current_state = self.graph.getState()
 
-                if self.recent_actions[action - 1] == 0:
-                    self.recent_actions.pop(action - 1)
+        for action in actions:
+            # if action -1 in self.forbidden_actions:
+            #     raise ValueError
+            if action - 1 not in self.forbidden_actions:  # Action 0 is taking no action.
+                self.graph.flipNode(action - 1)
 
         observation = self.graph.getState()
         self.graph.step()
@@ -139,6 +130,9 @@ class PBNTargetMultiEnv(gym.Env):
         step_count = 0
         returns_count = 0
         history = defaultdict(int)
+        top_count = 0
+        top_attractors = None
+
         while not force and not self.is_attracting_state(observation):  # to liczy się na jednym cpu, i prawdobodobnie powoduje bottleneck w obliczeniach
             old_observation = observation
             observation = tuple(self.graph.step())
@@ -147,17 +141,32 @@ class PBNTargetMultiEnv(gym.Env):
                 returns_count += 1
 
                 # type I pseudo-attractor
-                if returns_count > 1000:
-                    dfs_attractor = self.dfs_check_attractor(observation)
-                    if dfs_attractor is not None:
-                        for a in list(dfs_attractor):
-                            self.all_attractors.append([a])
-                            self.attracting_states.add(a)
+                if returns_count > 10_000:
+                    if observation not in self.attracting_states:
+                        for node in self.graph.nodes:
+                            val = node.value
+                            if val != node.step(observation):
+                                raise ValueError('not an attractor')
+                        for i, value in enumerate(self.initial_values):
+                            try:
+                                if self.graph.nodes[self.forbidden_actions[i]].value != value:
+                                    raise ValueError
+                            except:
+                                # print(f"value of initial node {self.forbidden_actions[i]} - {self.graph.nodes[self.forbidden_actions[i]].name} has changed")
+                                # print(self.forbidden_actions)
+                                # print(self.forbidden_actions[i])
+                                # print(old_observation)
+                                # print(observation)
+                                return observation, -1000, False, True, {}
+                        else:
+                            print('added an attractor from PASIP-I')
+                            self.all_attractors.append([observation])
+                            self.attracting_states.add(observation)
                             self.probabilities.append(0)
-                        self.rework_probas()
-                        with open(self.path, "wb+") as f:
-                            pickle.dump(self.all_attractors, f)
-                        break
+                    self.rework_probas()
+                    with open(self.path, "wb+") as f:
+                        pickle.dump(self.all_attractors, f)
+                    break
             else:
                 returns_count = 0
 
@@ -165,25 +174,54 @@ class PBNTargetMultiEnv(gym.Env):
             history[observation] += 1
 
             # type II pseudo-attractor
-            if step_count > 10_000:
-                states = sorted(history.items(), key=lambda kv: kv[1], reverse=True)
-                new_attractors = [node for node, frequency in states if frequency > 1500]
+            if step_count > 100_000:
+                print('did 100k steps with no attractor')
+                max_visit = max(history.values())
 
-                for observation in new_attractors:
-                    dfs_attractor = self.dfs_check_attractor(observation)
-                    if dfs_attractor is not None:
-                        for a in list(dfs_attractor):
-                            if a not in self.attracting_states:
-                                self.all_attractors.append([a])
-                                self.attracting_states.add(a)
-                                self.probabilities.append(0)
+                if max_visit > 0.15 * sum(history.values()):
+
+                    new_attractors = [node for node in history if history[node] == max_visit]
+                    print('added attractors from PASIP-II: ', len(new_attractors))
+                else:
+                    new_attractors = list()
+
+                new_top_attractors = set([node for node in history if history[node] == max_visit])
+                if new_top_attractors != top_attractors:
+                    top_attractors = new_top_attractors
+                    top_count = 0
+                else:
+                    top_count += 1
+
+                if len(new_attractors) == 0 and top_count > 9:
+                    print('added attractors from pasip-III: ', len(top_attractors))
+                    new_attractors = list(top_attractors)
+
+                for a in new_attractors:
+                    if a not in self.attracting_states:
+                        for i, value in enumerate(self.initial_values):
+                            try:
+                                if self.graph.nodes[self.forbidden_actions[i]].value != value:
+                                    raise ValueError
+                            except:
+                                # print(f"value of initial node {i} - {self.graph.nodes[i].name} has changed")
+                                # print(self.forbidden_actions)
+                                # print(self.forbidden_actions[i])
+                                return observation, -1000, False, True, {}
+                        else:
+                            self.all_attractors.append([a])
+                            self.attracting_states.add(a)
+                            self.probabilities.append(0)
+                            history.clear()
                 self.rework_probas()
                 step_count = 0
-                history = defaultdict(int)
+
                 with open(self.path, "wb+") as f:
                     pickle.dump(self.all_attractors, f)
 
         reward, terminated, truncated = self._get_reward(observation, actions)
+
+        if current_state == observation:
+            reward -= 20
 
         return observation, reward, terminated, truncated, {}
 
@@ -198,7 +236,22 @@ class PBNTargetMultiEnv(gym.Env):
         return state
 
     def in_target(self, observation):
-        return tuple(observation) in self.target
+        # tlgl_good
+        # nodes = [65, 4, 56, 3]
+        # out_values = [1, 0, 1, 1]
+
+        # nodes = [3, 4]
+        out_values = [1, 0, 1, 1]
+
+        # if observation[nodes[0]] + observation[nodes[1]] == 0:
+        #     return False
+
+        for i in range(1):
+            if observation[self.out_nodes[i]] != out_values[i]:
+                return False
+
+        return True
+
 
     def _get_reward(self, observation: STATE, actions) -> Tuple[REWARD, TERMINATED, TRUNCATED]:
 
@@ -214,10 +267,13 @@ class PBNTargetMultiEnv(gym.Env):
         Returns:
             Tuple[REWARD, TERMINATED, TRUNCATED]: Tuple of the reward and the environment done status.
         """
-        reward, terminated = -1000, False
+        reward, terminated = 41, False
         observation = tuple(observation)
 
         reward -= 1 * len(actions)
+
+        if len(actions) > 10:
+            reward -= 10 * (len(actions) - 10)
 
         if self.in_target(observation):
             reward += 1000
@@ -231,18 +287,12 @@ class PBNTargetMultiEnv(gym.Env):
         if seed:
             self._seed(seed)
 
-        self.target_attractor_id, self.state_attractor_id = np.random.choice(range(min(100, len(self.all_attractors))),
-                                                                             size=2,
-                                                                             replace=False)
+        for node in self.graph.nodes:
+            node.used_by_agent = False
 
-        if self.target_attractor_id == self.state_attractor_id:
-            raise ValueError("nie tak miało być")
+        state = target = None
 
-        state_attractor = self.all_attractors[self.state_attractor_id]
-        target_attractor = self.all_attractors[self.target_attractor_id]
-
-        state = list(random.choice(state_attractor))
-        target = list(random.choice(target_attractor))
+        state = random.choice(self.divided_attractors)
 
         self.graph.setState(state)
 
@@ -250,11 +300,15 @@ class PBNTargetMultiEnv(gym.Env):
         observation = self.graph.getState()
         info = {
             "observation_idx": self._state_to_idx(observation),
-            "observation_dict": observation,
+            "observation_di ct": observation,
         }
 
-        self.target = target_attractor
-        return (tuple(state), tuple(target)), info
+        self.target = None
+        # print(state)
+        # print(self.target_attractors)
+        # print(len(self.divided_attractors))
+        # print(len(self.target_attractors))
+        return tuple(state), info
 
     def get_state(self):
         return np.array(self.graph.getState())
@@ -316,13 +370,13 @@ class PBNTargetMultiEnv(gym.Env):
         """Close out the environment and make sure everything is garbage collected."""
         del self.graph
 
-    def statistical_attractors(self):
+    def statistical_attractors(self, min_attractors):
         state_log = defaultdict(int)
 
         self.setTarget([[0] * self.N])
 
-        steps = 10**3
-        min_attractors = self.min_attractors
+        steps = 10_000
+        # min_attractors = self.min_attractors
 
         print(f"Calculating state statistics for N = {self.N}")
         print(f"running simulations. {steps} steps each")
@@ -334,14 +388,20 @@ class PBNTargetMultiEnv(gym.Env):
         # print(statistial_attractors)
 
         i = -1
-        while len(statistial_attractors) < min_attractors:
+        step_count = 0
+        print(f"using fa: {self.forbidden_actions} and iv: {self.initial_values}")
+        while len(statistial_attractors) > 0.1 * i:
             i += 1
+            step_count += 1
             state_log = defaultdict(int)
             s = [random.randint(0, 1) for _ in range(self.N)]
+            for initial_condition, initial_value in zip(self.forbidden_actions, self.initial_values):
+                print(f"set {initial_condition} to {initial_value}")
+                s[initial_condition] = initial_value
             self.graph.setState(s)
 
             # warmup
-            for _ in range(200):
+            for _ in range(1_000):
                 _ = self.step([], force=True)
 
             for j in range(steps):
@@ -350,17 +410,19 @@ class PBNTargetMultiEnv(gym.Env):
                 _ = self.step([], force=True)
 
             states = sorted(state_log.items(), key=lambda kv: kv[1], reverse=True)
+            new_attractors = [node for node, frequency in states if frequency > 0.2 * steps]
 
-            statistial_attractors.update([node for node, frequency in states if frequency > 0.1 * steps])
+            # PASIP-III
+            # if len(new_attractors) == 0:
+            #     new_attractors.append(states[0][0])
+
+            statistial_attractors.update(new_attractors)
+
             frequencies = sorted([frequency for node, frequency in states], reverse=True)[:10]
-            print(f"(10%) calculating using {frequencies}. Got {len(statistial_attractors)}")
+            print(f"({len(statistial_attractors), 10 * i}) calculating using {frequencies}. Got {len(statistial_attractors)} (+{len(new_attractors)})")
 
             if len(states) > longest_path_len:
                 longest_path_len = len(states)
-                longest_path = states
-
-        # print(f"got {len(statistial_attractors)}")
-        # print(f"longest path is {longest_path} of length {longest_path_len}")
 
         counter = 0
         failed_attractors = set()
@@ -378,11 +440,6 @@ class PBNTargetMultiEnv(gym.Env):
                     good_attractors.add(attractor)
                     break
 
-            # if dfs_attractor is None:
-            #     continue
-
-            # good_attractors = good_attractors.union(dfs_attractor)
-
         print(f"{len(failed_attractors)} states removed ({len(failed_attractors) / len(statistial_attractors) * 100}%)")
         statistial_attractors = list(good_attractors)
         print(f"{len(statistial_attractors)}")
@@ -391,6 +448,7 @@ class PBNTargetMultiEnv(gym.Env):
         return statistial_attractors
 
     def dfs_check_attractor(self, initial_state):
+        raise ValueError("dfs_check_attractor deprecated")
         graph = deepcopy(self.graph)
 
         states_to_check = [initial_state]
@@ -476,7 +534,7 @@ class PBNTargetMultiEnv(gym.Env):
 
                 print(len(new_attractors))
                 for s in new_attractors:
-                    print(s, history[s])
+                    # print(s, history[s])
                     self.all_attractors.append([s])
                     self.attracting_states.add(s)
                     self.probabilities.append(0)
@@ -574,7 +632,7 @@ class BittnerMulti7(PBNTargetMultiEnv):
             include_ids=self.includeIDs,
             bin_method="median",
             n_predictors=n_predictors,
-            k=3,
+            k=2,
             predictor_sets_path=self.predictor_sets_path,
         )
 

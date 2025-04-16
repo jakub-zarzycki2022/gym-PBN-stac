@@ -62,6 +62,7 @@ class Node:
 
     def setValue(self, value):
         self.value = value
+        # self.Predstep = lambda self, state: print('reduced'); return self.value
 
     def addLUT(self, LUT, inputIDs):
         self.LUT = LUT
@@ -139,6 +140,9 @@ class Node:
         return Y
 
     def step(self, state, verbose=False):
+        # if self.used_by_agent:
+        #     return self.value
+
         if self.LUTflag:
             Y = self.LUTstep(state)
         else:

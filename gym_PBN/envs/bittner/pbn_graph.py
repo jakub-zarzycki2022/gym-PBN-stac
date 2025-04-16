@@ -20,11 +20,14 @@ class PBNNode(Node):
                 predictor_genes.append(i)
 
         self.predictors = [predictor_genes]
+        self.used_by_agent = False
 
     def step(self, state, verbose=False):
         relevant_nodes = tuple(state[i] for i in self.predictors[0])
         proba = self.truth_table[relevant_nodes]
-        self.value = int(random.random() < proba)
+        # this requires some finese in case of probabilistic boolean models
+        # but works just fine for non-probabilistic ones
+        self.value = int(proba)
         return self.value
 
 
@@ -57,7 +60,7 @@ class PBNGraph(Graph):
 
             # print(top_node.predictors)
 
-            for bot_node_id in top_node.predictors:
+            for bot_node_id in top_node.predictors[0]:
                 if bot_node_id not in done:
                     done.add(bot_node_id)
                     top_nodes.append(top_node.index)

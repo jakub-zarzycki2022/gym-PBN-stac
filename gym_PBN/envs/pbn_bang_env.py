@@ -34,8 +34,8 @@ class PBNBangEnv(gym.Env):
         end_episode_on_success: bool = False,
         horizon: int = 100,
         n_parallel=2,
-        pasip_history_len=1000,
-        pasip_size=10,
+        pasip_history_len=10,
+        pasip_size=10000,
     ):
         self.target = None
         self.end_episode_on_success = end_episode_on_success
@@ -44,8 +44,8 @@ class PBNBangEnv(gym.Env):
         attractors = self.pbn.monte_carlo_detect_attractors(pasip_history_len, pasip_size, repr='bool')
 
         self.blocks = self.pbn.get_blocks(repr='bool')
-        self.all_attractors = [[float(x) for x in at] for at in attractors[0]]
         self.all_attractors = attractors[0]
+        print(attractors)
 
         print(f"setting {horizon}")
         self.horizon = horizon
@@ -107,12 +107,6 @@ class PBNBangEnv(gym.Env):
 
         self.pbn.simple_steps(n_steps=1, actions=actions)
         observation = self.pbn.history_bool[-1][0][0]
-
-        # self.pbn._history = np.array(observation_bool * self.pbn._n_parallel).reshape(
-        #     (1, self.pbn._n_parallel, self.pbn._n)
-        # )
-
-        self.pbn.simple_steps(n_steps=1, actions=actions)
 
         while not force and not self.is_attracting_state(observation):
             self.pbn.simple_steps(n_steps=10_000)
@@ -218,26 +212,6 @@ class PBNBangEnv(gym.Env):
         mode = self.render_mode if not mode else mode
 
         return self.pbn.history_bool[-1][0]
-
-        '''TODO: remove them if nothing breaks'''
-        # if mode == "human":
-        #     return self.get_state()
-        # if mode == "dict":
-        #
-        # elif mode == "PBN":
-        #     return self.graph.printGraph()
-        # elif mode == "STG":
-        #     return self.graph.genSTG()
-        # elif mode == "idx":
-        #     return self._state    _to_idx(self.graph.getState())
-        # elif mode == "float":
-        #     return [float(x) for x in self.graph.getState()]
-        # elif mode == "target":
-        #     state = self.graph.getState()
-        #     return [state[node] for node in self.target_nodes]
-        # elif mode == "target_idx":
-        #     target_state = self.render(mode="target")
-        #     return self._state_to_idx(target_state)
 
     # AM: Added to hadle the problem of render() method not accepting the keyword argument 'mode'.
     def getTargetIdx(self):

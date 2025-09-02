@@ -1,26 +1,13 @@
 import pickle
 import random
 from collections import defaultdict
-from itertools import product
-from pathlib import Path
-from typing import List, Set, Tuple, Union
-import pickle as pkl
-from scipy.stats import poisson, uniform
-
+from typing import List, Tuple
 import gymnasium as gym
 import networkx as nx
 import numpy as np
-import torch
-from gymnasium.spaces import Discrete, MultiBinary, MultiDiscrete
+
+from bang.core.pbn.utils.state_printing import convert_to_binary_representation
 from gym_PBN.types import GYM_STEP_RETURN, REWARD, STATE, TERMINATED, TRUNCATED
-
-from .bittner import base, utils
-from .bittner.base import findAttractors
-
-from gym_PBN.utils.get_attractors_from_cabean import get_attractors
-from gym_PBN.utils.get_cabean_model import get_cnet, parse_cnet
-
-from copy import deepcopy
 
 import bang
 from bang.core.attractors.monte_carlo.merge_attractors import merge_attractors
@@ -58,15 +45,13 @@ class PBNBangEnv(gym.Env):
 
         self.blocks = self.pbn.get_blocks(repr='bool')
         self.all_attractors = [[float(x) for x in at] for at in attractors[0]]
+        self.all_attractors = attractors[0]
 
         print(f"setting {horizon}")
         self.horizon = horizon
 
         # Gym
-        # self.observation_space = MultiBinary(self.graph.N)
-        # intervention nodes + no action
         print("\nhello\n")
-        # self.action_space = MultiDiscrete(self.graph.N + 1)
         self.name = name
         self.render_mode = render_mode
         self.render_no_cache = render_no_cache
@@ -74,7 +59,6 @@ class PBNBangEnv(gym.Env):
         # State
         self.n_steps = 0
 
-        self.all_attractors = []
         self.attracting_states = set()
         self.counter = 0
 
@@ -88,11 +72,16 @@ class PBNBangEnv(gym.Env):
         self.target_nodes = target_nodes
         self.target_values = target_values
 
-        self.attractor_set = {a[0] for a in self.all_attractors}
-        self.divided_attractors = [a[0] for a in self.all_attractors if
-                                   not (self.in_target(a[0]))]
-        self.target_attractors = [a[0] for a in self.all_attractors if
-                                  self.in_target(a[0])]
+        self.attractor_set = {tuple(a) for a in self.all_attractors}
+        self.divided_attractors = [a for a in self.all_attractors if
+                                   not (self.in_target(a))]
+        self.target_attractors = [a for a in self.all_attractors if
+                                  self.in_target(a)]
+
+        if len(self.divided_attractors) == 0:
+            print("THERE IS NO VALID SOURCE ATTRACTOR")
+        if len(self.target_attractors) == 0:
+            print("THERE IS NO VALID TARGET ATTRACTOR")
 
     def _seed(self, seed: int = None):
         np.random.seed(seed)
@@ -117,34 +106,33 @@ class PBNBangEnv(gym.Env):
         actions = [action-1 for action in actions if action not in self.forbidden_actions]
 
         self.pbn.simple_steps(n_steps=1, actions=actions)
-        observation_bool = self.pbn.history_bool[-1]
-        observation = [[int(x) for x in at] for at in observation_bool]
+        observation = self.pbn.history_bool[-1][0][0]
 
-        self.pbn._history = np.array(observation_bool * self.pbn._n_parallel).reshape(
-            (1, self.pbn._n_parallel, self.pbn.state_size)
-        )
+        # self.pbn._history = np.array(observation_bool * self.pbn._n_parallel).reshape(
+        #     (1, self.pbn._n_parallel, self.pbn._n)
+        # )
 
         self.pbn.simple_steps(n_steps=1, actions=actions)
 
         while not force and not self.is_attracting_state(observation):
             self.pbn.simple_steps(n_steps=10_000)
-            observation_bool = self.pbn.history_bool[-1][-1]
-            observation = [[float(x) for x in at] for at in observation_bool]
+            observation = self.pbn.history_bool[-1][-1][0]
 
-            trajectories = self.pbn.history_bool
-            trajectories = np.squeeze(trajectories).T
+            trajectories = self.pbn.history
+            trajectories = np.squeeze(trajectories, axis=2).T
             trajectories = trajectories[::, 1:]
 
             attractors = merge_attractors(trajectories)
+            attractors = convert_to_binary_representation(attractors, self.pbn._n)[0]
 
             # type II pseudo-attractor
             for a in attractors:
-                if a not in self.attracting_states:
+                if tuple(a) not in self.attracting_states:
                     self.all_attractors.append([a])
-                    self.attracting_states.add(a)
+                    self.attracting_states.add(tuple(a))
 
-                with open(self.path, "wb+") as f:
-                    pickle.dump(self.all_attractors, f)
+                # with open(self.path, "wb+") as f:
+                #     pickle.dump(self.all_attractors, f)
 
         reward, terminated, truncated = self._get_reward(observation, actions)
 
@@ -158,7 +146,7 @@ class PBNBangEnv(gym.Env):
         return state
 
     def in_target(self, observation):
-        for i in range(1):
+        for i in range(len(self.target_values)):
             if observation[self.target_nodes[i]] != self.target_values[i]:
                 return False
         return True
@@ -199,12 +187,15 @@ class PBNBangEnv(gym.Env):
 
         state = target = None
 
-        state = random.choice(self.divided_attractors)
+        if len(self.divided_attractors) > 0:
+            state = random.choice(self.divided_attractors)
+        else:
+            state = self.target_attractors[0]
 
         self.pbn.set_states([state])
 
         self.n_steps = 0
-        observation = self.pbn.history_bool[-1][0][0]
+        observation = [int(x) for x in self.pbn.history_bool[-1][0][0]]
         info = {
             "observation_idx": self._state_to_idx(observation),
             "observation_di ct": observation,

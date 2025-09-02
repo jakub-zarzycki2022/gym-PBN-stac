@@ -33,7 +33,7 @@ The environments provide the framework for such networks. They need to be instan
 
 Requirements: [Python 3.9+](https://www.python.org/downloads/).
 
-PIP: `python -m pip install gym-PBN`
+`pip install -e .`
 
 ## Configuring your own PB(C)N
 

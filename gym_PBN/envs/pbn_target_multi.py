@@ -390,7 +390,7 @@ class PBNTargetMultiEnv(gym.Env):
         i = -1
         step_count = 0
         print(f"using fa: {self.forbidden_actions} and iv: {self.initial_values}")
-        while len(statistial_attractors) > 0.1 * i:
+        while 100 * len(statistial_attractors) > i:
             i += 1
             step_count += 1
             state_log = defaultdict(int)

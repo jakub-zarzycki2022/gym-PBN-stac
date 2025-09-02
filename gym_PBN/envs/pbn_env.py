@@ -58,12 +58,20 @@ class PBNEnv(PBNTargetMultiEnv):
         # self.initial_values = [0, 0, 0, 0, 0]
 
         # bortezomib_general:
-        input_nodes = []
-        self.initial_values = []
+        # input_nodes = []
+        # self.initial_values = []
 
         # bladder
-            # input_nodes = ["v_GrowthInhibitors", "v_Growth_Arrest", "v_Proliferation", "v_DNAdamage"]
-        # self.initial_values = [0, 1, 1, 1]
+        input_nodes = ["GrowthInhibitors", "Growth_Arrest", "Proliferation", "DNAdamage"]
+        self.initial_values = [0, 1, 1, 1]
+
+        # pbn7
+        # input_nodes = []
+        # self.initial_values = []
+
+        # chicken sex
+        # input_nodes = []
+        # self.initial_values = []
 
         # bladder2
         # input_nodes = ["v_EGFR_stimulus", "v_GrowthInhibitors"]
@@ -72,6 +80,8 @@ class PBNEnv(PBNTargetMultiEnv):
         # mapk
         # input_nodes = ["v_EGFR_stimulus", "v_FGFR3_stimulus"]
         # self.initial_values = [0, 0]
+        # input_nodes = []
+        # self.initial_values = []
 
         # mcf7
         # input_nodes = ['v_ABL2', 'v_DLL_i', 'v_EGF', 'v_ES', 'v_IGF1', 'v_IL6R', 'v_INS', 'v_NRG1', 'v_PG', 'v_WNT1']
@@ -108,11 +118,12 @@ class PBNEnv(PBNTargetMultiEnv):
 
         out_node_names = []
         # bortezomib
-        self.out_node_values = [0, 1, 1]
-        out_node_names = ["JNK", "p21", "Cas3"]
+        # self.out_node_values = [0, 1, 1]
+        # out_node_names = ["JNK", "p21", "Cas3"]
 
         # aba
         # out_node_names = ['v_Closure']
+        # self.out_node_values = [1]
 
         # to już nie bortezomib
         # out_node_names = ["Dec2", "SHP2", "GATA3"]
@@ -142,7 +153,15 @@ class PBNEnv(PBNTargetMultiEnv):
         # self.out_node_values = [1]
 
         #bladder
-        # out_node_names = ["v_Apoptosis_b1"]
+        out_node_names = ["v_Apoptosis_b1"]
+        self.out_node_values = [1]
+
+        # # pbn7
+        # out_node_names = ["v_Cro_b3"]
+        # self.out_node_values = [0]
+
+        # chicken sex
+        # out_node_names = ["v_OESTROGEN"]
         # self.out_node_values = [1]
 
         self.out_nodes = []
@@ -186,9 +205,6 @@ class PBNEnv(PBNTargetMultiEnv):
                 pickle.dump(self.all_attractors, f)
 
         while len(self.target_attractors) == 0:
-            for at in self.all_attractors:
-                print([at[0][i] for i in range(65, 100)])
-
             for i, node in enumerate(self.graph.nodes):
                 print(i, node.name)
             for at in self.all_attractors:
@@ -238,8 +254,8 @@ class PBNEnv(PBNTargetMultiEnv):
 
         print(len(self.divided_attractors), len(self.target_attractors))
         
-        for attractor in self.all_attractors:
-            print(attractor[0][10], attractor[0][14], self.is_singleton(attractor[0]))
+        # for attractor in self.all_attractors:
+        #     print(attractor[0][10], attractor[0][14], self.is_singleton(attractor[0]))
 
         # print(self.initial_values)
         # raise ValueError
@@ -259,6 +275,9 @@ class PBNEnv(PBNTargetMultiEnv):
         return state in self.attractor_set
 
     def in_target(self, observation):
+        # print([gene.name for gene in self.graph.nodes])
+        # print(self.out_nodes)
+        # print(self.out_node_values)
         for i in range(len(self.out_node_values)):
             if observation[self.out_nodes[i]] != self.out_node_values[i]:
                 return False

@@ -75,9 +75,3 @@ The final thing you can configure without modifying the environment is the actua
 1. `"successful_reward"`: integer reward given for actions that transition into the target attractor. Defaults to `5`. Recommended: `> 2`.
 2. `"wrong_attractor_cost"`: integer cost associated to actions that transition into an undesired attractor. Defaults to `2`. This is applied for every attractor that the new state hits (sometimes it's multiple).
 3. `"action_cost"`: integer cost associated to actions being taken. Defaults to `1`, to discourage the agent from intervening too often.
-
-## Credits
-
-The majority of the work for the implementation of Probabilistic Boolean Networks in Python can be attributed to [Vytenis Šliogeris](https://github.com/vjsliogeris) and his [PBN_env](https://github.com/vjsliogeris/PBN_env) package. In fact he implemented the prototype version of `gym-PBN` some time ago.
-
-[Evangelos Chatzaroulas](mailto:e.chatzaroulas@surrey.ac.uk) finished the adaptation to Gymnasium and implemented PB(C)N support. He is currently the primary maintainer.

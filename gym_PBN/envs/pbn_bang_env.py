@@ -174,6 +174,14 @@ class PBNBangEnv(gym.Env):
         truncated = self.n_steps == self.horizon
         return reward, terminated, truncated
 
+    def calculate_attractors(self, n_paths, path_len, trajectory_length=1000):
+        if n_paths < 2:
+            n_paths = 2
+
+        self.pbn._n_parallel = n_paths
+        attractors = self.pbn.monte_carlo_detect_attractors(trajectory_length=trajectory_length, attractor_length=path_len)
+        return attractors
+
     def reset(self, seed: int = None, options: dict = None):
         """Reset the environment. Initialise it to a random state, or to a certain state."""
         if seed:

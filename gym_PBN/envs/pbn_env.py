@@ -18,6 +18,7 @@ class PBNEnv(PBNTargetMultiEnv):
             logic_functions=None,
             genes=None,
             min_attractors=3,
+            model_name='bortezomib',
     ):
         self.N = N
         print(f"its me, PBN-{self.N}")
@@ -54,60 +55,70 @@ class PBNEnv(PBNTargetMultiEnv):
         #                   "IL6_e", "IL6RA", "TGFB_e", "IL22_e", "IL2_e", "IL23_e", "IL15RA", "IL12_e"]:
 
         # bortezomib:
-        # input_nodes = ["XX", "SHP1", "TNFAR", "Bort", "TNFA"]
-        # self.initial_values = [0, 0, 0, 0, 0]
+        if model_name == 'bortezomib':
+            input_nodes = ["XX", "SHP1", "TNFAR", "Bort", "TNFA"]
+            self.initial_values = [0, 0, 0, 0, 0]
 
         # bortezomib_general:
         # input_nodes = []
         # self.initial_values = []
 
         # bladder
-        input_nodes = ["GrowthInhibitors", "Growth_Arrest", "Proliferation", "DNAdamage"]
-        self.initial_values = [0, 1, 1, 1]
+        if model_name == 'bladder':
+            input_nodes = ["GrowthInhibitors", "Growth_Arrest", "Proliferation", "DNAdamage"]
+            self.initial_values = [0, 1, 1, 1]
 
         # pbn7
-        # input_nodes = []
-        # self.initial_values = []
+        if model_name == 'pbn7':
+            input_nodes = []
+            self.initial_values = []
 
         # chicken sex
-        # input_nodes = []
-        # self.initial_values = []
+        if model_name == 'chicken_sex':
+            input_nodes = []
+            self.initial_values = []
 
         # bladder2
-        # input_nodes = ["v_EGFR_stimulus", "v_GrowthInhibitors"]
-        # self.initial_values = [0, 1]
+        if model_name == 'bladder2':
+            input_nodes = ["v_EGFR_stimulus", "v_GrowthInhibitors"]
+            self.initial_values = [0, 1]
 
         # mapk
-        # input_nodes = ["v_EGFR_stimulus", "v_FGFR3_stimulus"]
-        # self.initial_values = [0, 0]
-        # input_nodes = []
-        # self.initial_values = []
+        if model_name == 'mapk':
+            input_nodes = ["v_EGFR_stimulus", "v_FGFR3_stimulus"]
+            self.initial_values = [0, 0]
+            # input_nodes = []
+            # self.initial_values = []
 
         # mcf7
-        # input_nodes = ['v_ABL2', 'v_DLL_i', 'v_EGF', 'v_ES', 'v_IGF1', 'v_IL6R', 'v_INS', 'v_NRG1', 'v_PG', 'v_WNT1']
-        # self.inital_values = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+        if model_name == 'mcf7':
+            input_nodes = ['v_ABL2', 'v_DLL_i', 'v_EGF', 'v_ES', 'v_IGF1', 'v_IL6R', 'v_INS', 'v_NRG1', 'v_PG', 'v_WNT1']
+            self.inital_values = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
 
         # input_nodes = ["XX", "SHP1", "TNFAR", "Bort", "TNFA"]
 
         #CD4+
-        # input_nodes = ["IL27RA", "IL27_e", "GP130", "Galpha_QL", "IL2RB", "CGC", "Galpha_iL", "MHC_II", "APC",
-        #                   "IL18_e", "IL9_e", "IFNB_e", "ECM", "IL21_e", "alpha_13L", "IL10RA", "IL10RB", "IL10_e",
-        #                   "IL15_e", "B7", "IFNGR1", "IFNGR2", "IFNG_e", "CAV1_ACTIVATOR", "GalphaS_L", "IL4_e",
-        #                   "IL6_e", "IL6RA", "TGFB_e", "IL22_e", "IL2_e", "IL23_e", "IL15RA", "IL12_e"]
-        # self.initial_values = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-        # assert (len(input_nodes) == len(self.initial_values))
+        if model_name == 'cd4':
+            input_nodes = ["IL27RA", "IL27_e", "GP130", "Galpha_QL", "IL2RB", "CGC", "Galpha_iL", "MHC_II", "APC",
+                              "IL18_e", "IL9_e", "IFNB_e", "ECM", "IL21_e", "alpha_13L", "IL10RA", "IL10RB", "IL10_e",
+                              "IL15_e", "B7", "IFNGR1", "IFNGR2", "IFNG_e", "CAV1_ACTIVATOR", "GalphaS_L", "IL4_e",
+                              "IL6_e", "IL6RA", "TGFB_e", "IL22_e", "IL2_e", "IL23_e", "IL15RA", "IL12_e"]
+            self.initial_values = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+            assert (len(input_nodes) == len(self.initial_values))
 
 
         #tdiff_jun
-        # input_nodes = ["APC", "IFNB_e", "IFNG_e", "IL2_e", "IL4_e", "IL6_e", "IL10_e", "IL12_e", "IL15_e", "IL21_e",
-        #                "IL23_e", "IL27_e", "TGFB_e", "IFNGR1", "IFNGR2", "GP130", "IL6RA", "CGC", "IL12RB2", "IL10RB",
-        #                "IL10RA", "IL15RA", "IL2RB", "IL27RA"]
-        #
-        # self.initial_values = [1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+        if model_name == 'tdiff_jun':
+            input_nodes = ["APC", "IFNB_e", "IFNG_e", "IL2_e", "IL4_e", "IL6_e", "IL10_e", "IL12_e", "IL15_e", "IL21_e",
+                           "IL23_e", "IL27_e", "TGFB_e", "IFNGR1", "IFNGR2", "GP130", "IL6RA", "CGC", "IL12RB2", "IL10RB",
+                           "IL10RA", "IL15RA", "IL2RB", "IL27RA"]
+
+            self.initial_values = [1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
 
         #random200
-        # inpurt_nodes = []
-        # self.initial_values = []
+        if model_name == 'random200':
+            inpurt_nodes = []
+            self.initial_values = []
 
         for node_name in input_nodes:
             for i in range(len(self.graph.nodes)):
@@ -118,51 +129,62 @@ class PBNEnv(PBNTargetMultiEnv):
 
         out_node_names = []
         # bortezomib
-        # self.out_node_values = [0, 1, 1]
-        # out_node_names = ["JNK", "p21", "Cas3"]
+        if model_name == 'bortezomib':
+            self.out_node_values = [0, 1, 1]
+            out_node_names = ["JNK", "p21", "Cas3"]
 
         # aba
-        # out_node_names = ['v_Closure']
-        # self.out_node_values = [1]
+        if model_name == 'aba':
+            out_node_names = ['v_Closure']
+            self.out_node_values = [1]
 
         # to już nie bortezomib
         # out_node_names = ["Dec2", "SHP2", "GATA3"]
 
         #cd4+
-        # out_node_names = ["v_GATA3"]
-        # self.out_node_values = [1]
+        if model_name == 'cd4':
+            out_node_names = ["v_GATA3"]
+            self.out_node_values = [1]
 
         #tdiff_jun
-        # out_node_names = ["TBET", "GATA3", "RORGT", "FOXP3"]
-        # self.out_node_values = [1, 0, 1, 1]
+        if model_name == 'tdiff_jun':
+            out_node_names = ["TBET", "GATA3", "RORGT", "FOXP3"]
+            self.out_node_values = [1, 0, 1, 1]
 
         #mcf7
-        # out_node_names = ["v_CASP3", "v_E2F1"]
+        if model_name == 'mcf7':
+            out_node_names = ["v_CASP3", "v_E2F1"]
 
 
         #tlgl
-        # out_node_names = ["v_Apoptosis"]
-        # self.out_node_values = [1]
+        if model_name == 'tlgl':
+            out_node_names = ["v_Apoptosis"]
+            self.out_node_values = [1]
 
         #MAPK
-        # out_node_names = ["v_Apoptosis"]
-        # self.out_node_values = [1]
+        if model_name == 'mapk':
+            out_node_names = ["v_Apoptosis"]
+            self.out_node_values = [1]
 
         #random 200
-        # out_node_names = ["x3"]
-        # self.out_node_values = [1]
+        if model_name == 'random200':
+            out_node_names = ["x3"]
+            self.out_node_values = [1]
 
         #bladder
-        out_node_names = ["v_Apoptosis_b1"]
-        self.out_node_values = [1]
+        if model_name == 'bladder':
+            out_node_names = ["v_Apoptosis_b1"]
+            self.out_node_values = [1]
 
         # # pbn7
-        # out_node_names = ["v_Cro_b3"]
-        # self.out_node_values = [0]
+        if model_name == 'pbn7':
+            out_node_names = ["v_Cro_b3"]
+            self.out_node_values = [0]
 
         # chicken sex
-        # out_node_names = ["v_OESTROGEN"]
-        # self.out_node_values = [1]
+        if model_name == 'chicken_sex':
+            out_node_names = ["v_OESTROGEN"]
+            self.out_node_values = [1]
 
         self.out_nodes = []
 
@@ -196,7 +218,7 @@ class PBNEnv(PBNTargetMultiEnv):
             print('calculating new attractors')
             self.target_attractors = []
 
-            self.all_attractors += [[s] for s in self.statistical_attractors(3)]
+            self.all_attractors += [[s] for s in self.statistical_attractors(min_attractors=min_attractors)]
             self.divided_attractors = [a[0] for a in self.all_attractors if not (self.in_target(a[0]))]
 
             self.target_attractors = [a[0] for a in self.all_attractors if self.in_target(a[0])]
